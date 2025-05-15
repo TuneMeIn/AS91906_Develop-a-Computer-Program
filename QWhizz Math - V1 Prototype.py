@@ -1,6 +1,6 @@
 # Date Created: 05/05/2025
 # Author: Jack Compton
-# Purpose: GUI application for Flow Computing that helps students with their mathematics
+# Purpose: GUI application for Flow Computing that helps students with their mathematics.
 
 import customtkinter as CTk
 from tkinter import *
@@ -8,113 +8,474 @@ from tkinter import ttk
 from PIL import Image, ImageTk 
 
 
-# Add the next user's quiz details to the list
-def append_quiz_details():
-    # Append each item to its own area of the list
-    quiz_details.append([username.get(), difficulty.get(), questions.get()])
-    # Clear the boxes
-    username.delete(0, 'end')
+class Tools:
+    # Constructor for the "Quiz" class, which takes an instance of the class names as a parameter and stores it in their unique attributes.
+    # This allows attributes and methods defined in the "Completion" class, for example, to be accessed from within the "Tools" class.
+    def __init__(self, completion_instance, quiz_instance, homepage_instance):
+        self.completion = completion_instance   # Store a reference to the "Completion" class instance.
+        self.quiz = quiz_instance               # Store a reference to the "Quiz" class instance.
+        self.home = homepage_instance           # Store a reference to the "Home" class instance.
 
 
-def slider_value_update(slider_id, value):
-    if slider_id == "S1":
-        if value == 0:
-            difficulty_label.configure(text="Easy  ")
-        elif value == 1:
-            difficulty_label.configure(text="Medium")
+    # Method for clearing all widgets or clearing specified widgets (column, row).
+    def clear_widget(self, procedure, all_widgets, column, row, save_details):
+        global username, difficulty, questions
+        if save_details == "Home":
+            username = self.home.username_entry.get()
+            questions = int(self.home.questions_slider.get())
+
+        if all_widgets == True:
+            # Clear all page content
+            for widget in main_window.winfo_children():
+                widget.destroy()
+            if procedure != None: procedure()  # Go to the specified procedure from button command if it is specified.
+        elif all_widgets == False:
+            # Find all widgets in the specified row and column.
+            for widget in main_window.grid_slaves(column=column, row=row):
+                widget.destroy()  # Destroy the widgets occupying the specified space.
+
+
+    # Method for configuring the timer state (enabled/disabled).
+    # Unique identifiers are passed in "origin" to differentiate between the "Quiz" and "Completion" classes to manage their relevant timer labels.
+    def timer_config(self, origin, command):
+        if origin == "Quiz":
+            if command == "Enable":
+                self.quiz.timer_lbl.configure(text=f"Time: {self.quiz.time_string}")
+            if command == "Disable":
+                self.quiz.timer_lbl.configure(text="Timer Disabled")
+        if origin == "Completion":
+            if command == "Enable":
+                self.completion.total_time_lbl.configure(text=f"Total Time: {self.quiz.total_time}")
+            if command == "Disable":
+                self.completion.total_time_lbl.configure(text="Timer Disabled")
+
+
+
+class About:
+    # Contstructor for the "About" class, which sets up the full window for the "About" page.
+    def __init__(self):  
+        # Disable the main window to prevent interaction with it while the about window is open.
+        main_window.attributes("-disabled", True)
+        
+        # Create a top-level window (separate from the main window).
+        self.about_window = Toplevel(main_window)
+        self.about_window.title("About")
+        self.about_window.columnconfigure(0, weight=0, minsize=300)
+        self.about_window.resizable(False, False)
+        self.about_window.transient(main_window)  # Keep on top of parent
+        self.about_window.lift()
+        self.about_window.focus()
+
+        # Add program details and a close button.
+        CTk.CTkLabel(self.about_window, text="QWhizz Math\nVersion 1.0\n© 2025 Jack Compton", justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=10)
+        CTk.CTkButton(self.about_window, text="Close", command=self.close).grid(row=1, column=0, padx=10, sticky=EW, pady=10)
+
+        # Override the window close (X) button behavior so that the main window is enabled again when the about window is closed using this button.
+        self.about_window.protocol("WM_DELETE_WINDOW", self.close)
+
+
+    def close(self):
+        main_window.attributes("-disabled", False)
+        self.about_window.destroy()
+
+
+
+class Completion:
+    def __init__(self, tools_instance, quiz_instance, homepage_instance):
+        self.tools = tools_instance     # Store a reference to the "Tools" class instance.
+        self.quiz = quiz_instance       # Store a reference to the "Quiz" class instance.
+        self.home = homepage_instance  # Store a reference to the "Home" class instance.
+
+
+    def setup_completion(self):
+        # Set width for column 0 (1 total) in the main window. Positive weight means the column will expand to fill the available space.
+        main_window.columnconfigure(0, weight=1, minsize=430)
+
+        # Set up the menu bar.
+        completion_menubar = Menu(main_window)  # Create a new menu bar.
+
+        settings_menu = Menu(completion_menubar, tearoff=0)
+        completion_menubar.add_cascade(label="Settings", menu=settings_menu)
+        timer_settings = Menu(completion_menubar, tearoff=0)
+        settings_menu.add_cascade(menu=timer_settings, label="Timer")
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.timer_config("Completion", "Enable"), value=True)
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.timer_config("Completion", "Disable"), value=False)
+
+        help_menu = Menu(completion_menubar, tearoff=0)
+        completion_menubar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="Documentation")
+        help_menu.add_command(label="About", command=About)
+
+        main_window.config(menu=completion_menubar)
+
+        # Set up a home frame to place the main home elements inside.
+        completion_frame1 = CTk.CTkFrame(main_window)
+        completion_frame1.grid(column=0, row=0, sticky=EW, padx=10, pady=(10,5))
+        completion_frame1._set_appearance_mode("light")
+
+        # Set width for columns 0-2 (3 total) in content frame 1. Total minimum column width is 350px so that the frame will resize to fit the content.
+        completion_frame1.columnconfigure(0, weight=1, minsize=410)
+
+        # Create the labels to be placed next to their relevant entry boxes.
+        CTk.CTkLabel(completion_frame1, text="Quiz Complete!", font=("Segoe UI", 16, "bold")).grid(column=0, row=0, sticky=EW, padx=5, pady=(10,8))
+        CTk.CTkLabel(completion_frame1, text=f"You scored a total of: {self.quiz.score}/{questions}", font=("Segoe UI", 14)).grid(column=0, row=1, sticky=EW, padx=5)
+        CTk.CTkLabel(completion_frame1, text=f"Difficulty: {difficulty}", font=("Segoe UI", 14)).grid(column=0, row=2, sticky=EW, padx=5)
+        self.total_time_lbl = CTk.CTkLabel(completion_frame1, text="", font=("Segoe UI", 14))  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
+        self.total_time_lbl.grid(column=0, row=3, sticky=EW, padx=5, pady=(0,10))
+        if timer.get() == True:
+            self.tools.timer_config("Completion", "Enable")
+        if timer.get() == False:
+            self.tools.timer_config("Completion", "Disable")
+
+
+        # Create a frame to place the buttons inside.
+        button_frame = CTk.CTkFrame(main_window, fg_color="transparent")
+        button_frame.grid(column=0, row=1, sticky=EW, padx=10, pady=(5,10))
+        button_frame._set_appearance_mode("light")
+        # Set width for columns 0-1 (2 total) in the answer frame. Total minimum column width is 410px.
+        button_frame.columnconfigure(0, weight=1, minsize=205)
+        button_frame.columnconfigure(1, weight=1, minsize=205)
+
+        # Create the buttons.
+        CTk.CTkButton(button_frame, text="View Answers", width=200).grid(column=0, row=0, sticky=EW, padx=(0,5), pady=(0,5))
+        CTk.CTkButton(button_frame, text="Retry Quiz", width=200).grid(column=1, row=0, sticky=EW, padx=(5,0), pady=(0,5))
+        CTk.CTkButton(button_frame, text="Scoreboard", width=200).grid(column=0, row=1, sticky=EW, padx=(0,5), pady=(5,0))
+        CTk.CTkButton(button_frame, text="Home", command=lambda: self.quiz.reset_timer("home"), width=200).grid(column=1, row=1, sticky=EW, padx=(5,0), pady=(5,0))
+
+
+
+class Quiz:
+    # Constructor for the "Quiz" class, which takes an instance of the class names as a parameter and stores it in their unique attributes.
+    # This allows attributes and methods defined in the "Home" class, for example, to be accessed from within the "Quiz" class.
+    def __init__(self, tools_instance, completion_instance, homepage_instance):
+        self.tools = tools_instance             # Store a reference to the "Tools" class instance.
+        self.completion = completion_instance   # Store a reference to the "Completion" class instance.
+        self.home = homepage_instance           # Store a reference to the "Home" class instance.
+        self.question_no = 1        # Variable for keeping track of which question the user is on, with the default value being 1.
+        self.timer_active = False
+        self.elapsed_time = 0       # Variable to store the elapsed time, defaulting to 0.
+        self.time_string = "00:00:00"
+        self.total_time = "00:00:00"
+        self.user_answers = []
+        self.correct_answers = []
+        self.score = 0
+
+
+    # Add the next user's quiz details to the list.
+    def append_quiz_details(self):
+        # Append each item to its own area of the list.
+        quiz_details.append([username, difficulty, questions])
+        self.home.username_entry.delete(0, 'end')  # Clear the username entry box.
+
+
+    def start_timer(self):
+        self.timer_active = True
+        self.update_timer()
+
+
+    def stop_timer(self, command):
+        self.timer_active = False
+        if command == "home":
+            self.reset_timer("home")
+
+
+    def reset_timer(self, command):
+        self.elapsed_time = 0
+        self.time_string = "00:00:00"
+        self.total_time = "00:00:00"
+        if command == "home":
+            self.user_answers.clear()
+            self.question_no = 1
+            self.score = 0
+            self.tools.clear_widget(self.home.setup_homepage, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the home page.
+
+
+    def update_timer(self):
+        if self.timer_active:
+            # Format seconds to HH:MM:SS
+            # Divide total seconds by 3600 (as there are 3600 seconds in an hour) to get the number of full hours.
+            hours = self.elapsed_time // 3600  # Floor division (//) divides and rounds down to the nearest whole number.
+            
+            # Modulo (%) by 3600 to remove full hours and get the remaining seconds.
+            # Then divide the remaining seconds by 60 to get minutes as a whole number.
+            minutes = (self.elapsed_time % 3600) // 60  # Modulo (%) divides and gives the remainder after division, then floor division (//) gives the full minutes.
+            
+            # Modulo (%) by 60 (as there are 60 seconds in a minute) to remove the full minutes and get the remaining seconds.
+            seconds = self.elapsed_time % 60
+            
+            # Format the time as HH:MM:SS, padding with zeros instead of spaces (":0"), and with a minimum of 2 digits ("2") for each part.
+            self.time_string = f"{hours:02}:{minutes:02}:{seconds:02}"  
+            self.total_time = self.time_string
+
+            # Update the label
+            if timer.get() == True:
+                self.timer_lbl.configure(text=f"Time: {self.time_string}")
+
+            # Increment and schedule next update
+            self.elapsed_time += 1
+            self.timer_lbl.after(1000, self.update_timer)
+
+
+    def answer_management(self, answer):
+        self.user_answers.append(answer)  # Append the user's answer to the list of all their answers.
+        
+        answer_index = len(self.user_answers) - 1  # Get the index of the most recent answer in the list, using "len()" to get the total number of items in the list.
+        if self.user_answers[answer_index] == self.correct_answers[answer_index]:  # Check if the most recent answer matches the correct answer for the current question.
+            self.score += 1
+                
+        if self.question_no < questions:
+            self.question_no += 1
+            self.question_no_lbl.configure(text=f"Question {self.question_no}/{questions}")  # Update the question number label.
         else:
-            difficulty_label.configure(text="Hard  ")
-    if slider_id == "S2":
-        question_no_label.configure(text=f"{int(value)} Questions")
+            self.stop_timer(None)
+            self.tools.clear_widget(self.completion.setup_completion, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the completion page.
 
-# Function for setting up the UI elements consisting of images, labels, entry boxes, sliders (scales), and buttons.
-def setup_elements():
-    global username, difficulty, questions, difficulty_label, question_no_label, timer
 
-    # Set up the menu bar
-    menubar = Menu(main_window)
+    # Procedure for setting up the UI elements consisting of images, labels, entry boxes, sliders (scales), and buttons.
+    def setup_quiz(self):
+        
+        # Set width for column 0 (1 total) in the main window. Positive weight means the column will expand to fill the available space.
+        main_window.columnconfigure(0, weight=1, minsize=430)
 
-    filemenu = Menu(menubar, tearoff=0)
-    menubar.add_cascade(label="File", menu=filemenu)
-    filemenu.add_command(label="Print Selected", accelerator="Ctrl+P")
-    filemenu.add_command(label="Print All", accelerator="Ctrl+Shift+P")
-    filemenu.add_command(label="Delete Selected", accelerator="Del")
-    filemenu.add_command(label="Delete All", accelerator="Shift+Del")
+        # Set up the menu bar.
+        quiz_menubar = Menu(main_window)  # Create a new menu bar.
+        
+        quiz_menu = Menu(quiz_menubar, tearoff=0)
+        quiz_menubar.add_cascade(label="Quiz", menu=quiz_menu)
+        quiz_menu.add_command(label="Restart Quiz", accelerator="Ctrl+R")
+        quiz_menu.add_command(label="New Quiz", accelerator="Ctrl+N")
+        quiz_menu.add_command(label="Exit Quiz", accelerator="Esc", command=lambda: self.stop_timer("home"))
 
-    settingsmenu = Menu(menubar, tearoff=0)
-    menubar.add_cascade(label="Settings", menu=settingsmenu)
-    timer_settings = Menu(menubar, tearoff=0)
-    settingsmenu.add_cascade(menu=timer_settings, label="Timer")
-    # Create a "timer" BooleanVar to control the timer checkbutton state, with the default value being True, putting the checkbutton in an on state.
-    timer = BooleanVar(value=True)
-    timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True)
-    timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False)
+        settings_menu = Menu(quiz_menubar, tearoff=0)
+        quiz_menubar.add_cascade(label="Settings", menu=settings_menu)
+        timer_settings = Menu(quiz_menubar, tearoff=0)
+        settings_menu.add_cascade(menu=timer_settings, label="Timer")
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.timer_config("Quiz", "Enable"), value=True)        # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.timer_config("Quiz", "Disable"), value=False)     # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
 
-    helpmenu = Menu(menubar, tearoff=0)
-    menubar.add_cascade(label="Help", menu=helpmenu)
-    helpmenu.add_command(label="Documentation")
-    helpmenu.add_command(label="About")
+        help_menu = Menu(quiz_menubar, tearoff=0)
+        quiz_menubar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="Documentation")
+        help_menu.add_command(label="About", command=About)
 
-    main_window.config(menu=menubar)
+        main_window.config(menu=quiz_menubar)
 
-    # Set up a content frame to place the main home elements inside
-    content_frame1 = CTk.CTkFrame(main_window)
-    content_frame1.grid(column=0, row=0, columnspan=2, sticky=EW, padx=10, pady=(10,5))
-    content_frame1._set_appearance_mode("light")
+        # Set up a content frame to place the top quiz elements inside.
+        quiz_dtls_frame1 = CTk.CTkFrame(main_window)
+        quiz_dtls_frame1.grid(column=0, row=0, sticky=EW, padx=10, pady=(10,5))
+        quiz_dtls_frame1._set_appearance_mode("light")
+        # Set width for columns 0-2 (3 total) in quiz details frame 1. Total minimum column width is 400px.
+        quiz_dtls_frame1.columnconfigure(0, weight=1, minsize=185)
+        quiz_dtls_frame1.columnconfigure(1, weight=1, minsize=30)
+        quiz_dtls_frame1.columnconfigure(2, weight=1, minsize=185)
 
-    # Set width for columns 0-2 (3 total) in content frame 1.
-    content_frame1.columnconfigure(0, weight=0, minsize=100)
-    content_frame1.columnconfigure(1, weight=0, minsize=150)
-    content_frame1.columnconfigure(2, weight=0, minsize=100)
+        # Create the labels and pause button to be placed at the top of the quiz page.
+        self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{questions}", font=("Segoe UI", 14, "bold"))
+        self.question_no_lbl.grid(column=0, row=0, pady=10, sticky=NSEW)
+        CTk.CTkButton(quiz_dtls_frame1, text="P", font=("Segoe UI", 14, "bold"), width=30).grid(column=1, row=0, pady=10)
+        self.timer_lbl = CTk.CTkLabel(quiz_dtls_frame1, text="", font=("Segoe UI", 14, "bold"))  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
+        self.timer_lbl.grid(column=2, row=0, pady=10, sticky=NSEW)
+        if timer.get() == True:
+            self.tools.timer_config("Quiz", "Enable")
+        elif timer.get() == False:
+            self.tools.timer_config("Quiz", "Disable")
 
-    # Create the labels to be placed next to their relevant entry boxes.
-    CTk.CTkLabel(content_frame1, text="Username").grid(column=0, row=0, sticky=E, padx=5, pady=(10,0))
-    CTk.CTkLabel(content_frame1, text="Difficulty").grid(column=0, row=1, sticky=E, padx=5, pady=10)
-    CTk.CTkLabel(content_frame1, text="Questions").grid(column=0, row=2, sticky=E, padx=5, pady=(0,10))
+        # Create a frame for the question label or question image.
+        question_frame = CTk.CTkFrame(main_window)
+        question_frame.grid(column=0, row=2, sticky=EW, padx=10, pady=5)
+        # Set width for column 0 (1 total) and row 0 (1 total) in quiz details frame 1.
+        question_frame.columnconfigure(0, weight=1, minsize=410)
+        question_frame.rowconfigure(0, weight=1, minsize=205)
+
+        # Create a canvas for the question image.
+        #question_canvas = CTk.CTkCanvas(question_frame, bd=0, highlightthickness=0)
+        #question_canvas.grid(row=0, column=0, pady=10)
+        question_lbl = CTk.CTkLabel(question_frame, text="It's looking a little empty...", font=("Segoe UI", 20, "bold"))
+        question_lbl.grid(column=0, row=0, pady=10)
+
+        # Create a frame for the answer buttons
+        answer_frame = CTk.CTkFrame(main_window, fg_color="transparent")
+        answer_frame.grid(column=0, row=3, sticky=EW, padx=10, pady=(5,10))
+        # Set width for columns 0-1 (2 total) in the answer frame. Total minimum column width is 410px.
+        answer_frame.columnconfigure(0, weight=1, minsize=205)
+        answer_frame.columnconfigure(1, weight=1, minsize=205)
+        
+        # Create the answer values.
+        answer_1 = "Yes"
+        answer_2 = "No"
+        answer_3 = "No"
+        answer_4 = "No"
+        
+        # Potential code for generating random answers.
+        #for i in range(questions):
+            #self.correct_answers = random.randint(1,10)
+            #correct_btn = random.randint(1,4)
+            #if correct_btn == 1:
+                #self.correct_answers[i] = "A"
+            #elif correct_btn == 2:
+                #self.correct_answers[i] = "B"
+            #elif correct_btn == 3:
+                #self.correct_answers[i] = "C"
+            #elif correct_btn == 4:
+                #self.correct_answers[i] = "D"
+            
+        self.correct_answers = ["A"] * questions
+
+        # Create the answer buttons.
+        btn_1 = CTk.CTkButton(answer_frame, text=f" A.    {answer_1}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("A"), anchor=W, width=200, height=40)
+        btn_1.grid(column=0, row=0, padx=(0, 5), pady=(0,5))
+        btn_2 = CTk.CTkButton(answer_frame, text=f" B.    {answer_2}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("B"), anchor=W, width=200, height=40)
+        btn_2.grid(column=1, row=0, padx=(5, 0), pady=(0,5))
+        btn_3 = CTk.CTkButton(answer_frame, text=f" C.    {answer_3}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("C"), anchor=W, width=200, height=40)
+        btn_3.grid(column=0, row=1, padx=(0, 5), pady=(5,0))
+        btn_4 = CTk.CTkButton(answer_frame, text=f" D.    {answer_4}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("D"), anchor=W, width=200, height=40)
+        btn_4.grid(column=1, row=1, padx=(5, 0), pady=(5,0))
+
+        self.start_timer()
+
+
+
+class Home:
+    # Constructor for the "Home" class, which takes an instance of the class names as a parameter and stores it in their unique attributes.
+    # This allows attributes and methods defined in the "Quiz" class, for example, to be accessed from within the "Home" class.
+    def __init__(self, tools_instance, completion_instance, quiz_instance):
+        self.tools = tools_instance             # Store a reference to the "Tools" class instance.
+        self.completion = completion_instance   # Store a reference to the "Completion" class instance.
+        self.quiz = quiz_instance               # Store a reference to the "Quiz" class instance.
     
-    difficulty_label = CTk.CTkLabel(content_frame1, text="", width=10)
-    difficulty_label.grid(column=2, row=1, sticky=W, padx=5, pady=10)
-    question_no_label = CTk.CTkLabel(content_frame1, text="", width=10)
-    question_no_label.grid(column=2, row=2, sticky=W, padx=5, pady=(0,10))
 
-    # Setup entry box and sliders (scales).
-    username = CTk.CTkEntry(content_frame1)
-    username.grid(column=1, row=0, padx=5, pady=(10,0), sticky=EW)
-    difficulty = CTk.CTkSlider(content_frame1, from_=0, to=2, number_of_steps=2, command=lambda value: slider_value_update("S1", value), orientation=HORIZONTAL)
-    difficulty.grid(column=1, row=1, padx=5, pady=10, sticky=EW)
-    questions = CTk.CTkSlider(content_frame1, from_=5, to=35, number_of_steps=30, command=lambda value: slider_value_update("S2", value), orientation=HORIZONTAL)
-    questions.grid(column=1, row=2, padx=5, pady=(0,10), sticky=EW)
-    slider_value_update("S1", difficulty.get())
-    slider_value_update("S2", questions.get())
-    
-    # Create the buttons
-    CTk.CTkButton(main_window, text="Scoreboard", width=200).grid(column=0, row=1, sticky=EW, padx=(10,5), pady=(5, 10))
-    CTk.CTkButton(main_window, text="Start", width=200).grid(column=1, row=1, sticky=EW, padx=(5,10), pady=(5,10))
+    # Procedure for updating the difficulty and question number labels based on the interpreted slider values.
+    def slider_value_update(self, slider_id, value):
+        global difficulty
+        if slider_id == "S1":
+            if value == 0:
+                difficulty = "Easy"
+            elif value == 1:
+                difficulty = "Medium"
+            else:
+                difficulty = "Hard"
+            self.difficulty_lbl.configure(text=difficulty)
+        if slider_id == "S2":
+            self.question_amnt_lbl.configure(text=f"{int(value)} Questions")
+
+
+    # Procedure for setting up the UI elements consisting of images, labels, entry boxes, sliders (scales), and buttons.
+    def setup_homepage(self):
+        global home_menubar
+
+        # Set width for column 0 (1 total) in the main window. Positive weight means the column will expand to fill the available space.
+        main_window.columnconfigure(0, weight=1, minsize=430)
+
+        # Set up the menu bar.
+        home_menubar = Menu(main_window)
+
+        file_menu = Menu(home_menubar, tearoff=0)
+        home_menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Print Selected", accelerator="Ctrl+P")
+        file_menu.add_command(label="Print All", accelerator="Ctrl+Shift+P")
+        file_menu.add_command(label="Delete Selected", accelerator="Del")
+        file_menu.add_command(label="Delete All", accelerator="Shift+Del")
+
+        settings_menu = Menu(home_menubar, tearoff=0)
+        home_menubar.add_cascade(label="Settings", menu=settings_menu)
+        timer_settings = Menu(home_menubar, tearoff=0)
+        settings_menu.add_cascade(menu=timer_settings, label="Timer")
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True)
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False)
+
+        help_menu = Menu(home_menubar, tearoff=0)
+        home_menubar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="Documentation")
+        help_menu.add_command(label="About", command=About)
+
+        main_window.config(menu=home_menubar)
+
+        # Set up a home frame to place the main home elements inside.
+        home_frame1 = CTk.CTkFrame(main_window)
+        home_frame1.grid(column=0, row=0, sticky=EW, padx=10, pady=(10,5))
+        home_frame1._set_appearance_mode("light")
+
+        # Set width for columns 0-2 (3 total) in content frame 1. Total minimum column width is 350px so that the frame will resize to fit the content.
+        home_frame1.columnconfigure(0, weight=1, minsize=100)
+        home_frame1.columnconfigure(1, weight=1, minsize=150)
+        home_frame1.columnconfigure(2, weight=1, minsize=100)
+
+        # Create the labels to be placed next to their relevant entry boxes.
+        CTk.CTkLabel(home_frame1, text="Username").grid(column=0, row=0, sticky=E, padx=5, pady=(10,0))
+        CTk.CTkLabel(home_frame1, text="Difficulty").grid(column=0, row=1, sticky=E, padx=5, pady=10)
+        CTk.CTkLabel(home_frame1, text="Questions").grid(column=0, row=2, sticky=E, padx=5, pady=(0,10))
+        
+        self.difficulty_lbl = CTk.CTkLabel(home_frame1, text="", width=10)          # Create an empty placeholder label to display the difficulty level.
+        self.difficulty_lbl.grid(column=2, row=1, sticky=W, padx=5, pady=10)
+        self.question_amnt_lbl = CTk.CTkLabel(home_frame1, text="", width=10)     # Create an empty placeholder label to display the number of questions.
+        self.question_amnt_lbl.grid(column=2, row=2, sticky=W, padx=5, pady=(0,10))
+
+        # Setup entry box and sliders (scales).
+        self.username_entry = CTk.CTkEntry(home_frame1)
+        self.username_entry.grid(column=1, row=0, padx=5, pady=(10,0), sticky=EW)
+        self.difficulty_slider = CTk.CTkSlider(home_frame1, from_=0, to=2, number_of_steps=2, command=lambda value: self.slider_value_update("S1", value), orientation=HORIZONTAL)
+        self.difficulty_slider.grid(column=1, row=1, padx=5, pady=10, sticky=EW)
+        self.questions_slider = CTk.CTkSlider(home_frame1, from_=5, to=35, number_of_steps=30, command=lambda value: self.slider_value_update("S2", value), orientation=HORIZONTAL)
+        self.questions_slider.grid(column=1, row=2, padx=5, pady=(0,10), sticky=EW)
+        self.slider_value_update("S1", self.difficulty_slider.get())
+        self.slider_value_update("S2", self.questions_slider.get())
+        
+        # Create a frame to place the buttons inside.
+        button_frame = CTk.CTkFrame(main_window, fg_color="transparent")
+        button_frame.grid(column=0, row=1, sticky=EW, padx=10, pady=(5,10))
+        button_frame._set_appearance_mode("light")
+        # Set width for columns 0-1 (2 total) in the answer frame. Total minimum column width is 410px.
+        button_frame.columnconfigure(0, weight=1, minsize=205)
+        button_frame.columnconfigure(1, weight=1, minsize=205)
+
+        # Create the buttons.
+        CTk.CTkButton(button_frame, text="Scoreboard", width=200).grid(column=0, row=1, sticky=EW, padx=(0,5))
+        CTk.CTkButton(button_frame, text="Start", command=lambda: self.tools.clear_widget(self.quiz.setup_quiz, True, None, None, "Home"), width=200).grid(column=1, row=1, sticky=EW, padx=(5,0))
+
+
 
 # Main function for starting the program.
 def main(): 
-    # Start the primary GUI functions.
-    setup_elements()
+    global main_window, quiz_details, timer_showing, timer
+    
+    # Initialise global lists and variables.
+    quiz_details = []               # Create empty list for user details so that their quiz results can be stored inside.
+    timer_showing = None            # Initialise a flag to track whether the timer is being displayed or not.
 
+    #Initialise the main window.
+    main_window = Tk()  # For scaling reasons, use a Tk window with CTk elements.
+    main_window.title("QWhizz Math")  # Set the title of the window.
+    #main_window.iconphoto(False, PhotoImage(file="Images/Pgm_icon.png"))  # Set the title bar icon.
+    main_window.resizable(False, False)         # Set the resizable property for height and width to False.
+    #main_window_bg = "#"                       # Set the background colour of the main window.
+    #main_window.configure(bg=main_window_bg)   # Configure the main window to use the background colour (value) of the "main_window_bg variable".
+    CTk.set_appearance_mode("light")
+
+    # Create a "timer" BooleanVar to control the timer checkbutton state, with the default value being True, putting the checkbutton in an on state.
+    timer = BooleanVar(value=True)  # Global reference to the timer checkbutton state.
+
+    # Set up the class instances.
+    # The classes (Tools, Home, and Quiz) reference each other, so some instances are first given placeholder values (None) and are linked once the necessary objects are created.
+    # Ultimately, the class instances are linked together to allow access to each other's attributes and methods.
+    tools = Tools(None, None, None)                         # Create a "tools" instance of the "Tools" class so that the "Tools" class attributes and methods can be accessed within other classes once created. Temporarily pass "None" for the "Completion", Home", and "Quiz" class instances until they are created.
+    completion_page = Completion(tools, None, None)         # Create a "completion_page" instance of the "Completion" class and pass in the "tools" instance. Temporarily pass "None" for the "home" and "quiz" instance until it is created.
+    quiz_page = Quiz(tools, completion_page, None)     # Create a "quiz_page" instance of the "Quiz" class and pass in the "tools", "completion_page" and "home_page" instances. This allows access to "Tools", "Completion", and "Home" class attributes and methods from within the "Quiz" class.
+    home_page = Home(tools, completion_page, quiz_page)          # Create a "home_page" instance of the "Home" class and pass in the "tools" and "completion_page" instance. Temporarily pass "None" for the "quiz" instance until it is created.
+    
+    # Link the remaining class instances to each other now that they are created.
+    tools.completion = completion_page  # Link the "completion_page" instance to the "tools" instance to allow access to "Completion" class attributes and methods from within the "Tools" class.
+    tools.quiz = quiz_page              # Link the "quiz_page" instance to the "tools" instance to allow access to "Quiz" class attributes and methods from within the "Tools" class.
+    tools.home = home_page              # Link the "home_page" instance to the "tools" instance to allow access to "Home" class attributes and methods from within the "Tools" class.
+    completion_page.quiz = quiz_page    # Link the "quiz_page" instance to the "completion_page" instance to allow access to "Quiz" class attributes and methods from within the "Completion" class.
+    completion_page.home = home_page    # Link the "home_page" instance to the "completion_page" instance to allow access to "Home" class attributes and methods from within the "Completion" class.
+    quiz_page.home = home_page          # Link the "home_page" instance to the "quiz_page" instance to allow access to "Home" class attributes and methods from within the "Quiz" class.
+
+    # Call the "setup_homepage" method from the "home_page" class instance to set up the home page UI elements.
+    home_page.setup_homepage()
+    
+    # Start the CTkinter event loop so that the GUI window stays open.
     main_window.mainloop()
 
-
-#Initialise the main window.
-main_window = CTk.CTk()
-main_window.title("QWhizz Math")  # Set the title of the window.
-#main_window.iconphoto(False, PhotoImage(file="Images/Pgm_icon.png"))  # Set the title bar icon.
-main_window.resizable(False, False)         # Set the resizable property for height and width to False.
-#main_window_bg = "#"                  # Set the background colour of the main window.
-#main_window.configure(bg=main_window_bg)    # Configure the main window to use the background colour (value) of the "main_window_bg variable".
-CTk.set_appearance_mode("light")
-
-# Set width for columns 0-1 (2 total) in the main window.
-main_window.columnconfigure(0, weight=0, minsize=215)
-main_window.columnconfigure(1, weight=0, minsize=215)
-
-# Initialise global lists and variables.
-quiz_details = []           # Create empty list for user details so that their quiz results can be stored inside.
-difficulty_list = ["Easy", "Medium", "Hard"]  # Create a list of the different difficulty levels.
 
 # Run the main function.
 main()
