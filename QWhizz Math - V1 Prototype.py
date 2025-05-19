@@ -5,6 +5,7 @@
 import customtkinter as CTk
 from tkinter import *
 from tkinter import ttk
+import time
 from PIL import Image, ImageTk 
 
 
@@ -19,12 +20,10 @@ class Tools:
 
 
     # Method for clearing all widgets or clearing specified widgets (column, row).
-    def clear_widget(self, procedure, all_widgets, column, row, save_details):
-        global username, difficulty, questions
-        if save_details == "Home" or save_details == "Scoreboard":
-            username = self.home.username_entry.get()
-            questions = int(self.home.questions_slider.get())
-
+    def clear_widget(self, procedure, all_widgets, column, row, command):
+        global username, difficulty_num, questions
+        
+        if command != None: command()  # Go to the specified procedure from passed command if it is specified.
         if all_widgets == True:
             # Clear all page content
             for widget in main_window.winfo_children():
@@ -34,6 +33,25 @@ class Tools:
             # Find all widgets in the specified row and column.
             for widget in main_window.grid_slaves(column=column, row=row):
                 widget.destroy()  # Destroy the widgets occupying the specified space.
+
+
+    # Method for saving details specific to the specified window.
+    def save_details(self, window):
+        global username, difficulty_num, questions
+        if window == "Home":
+            username = self.home.username_entry.get()           # Get the username entry widget value.
+            difficulty_num = self.home.difficulty_slider.get()  # Get the difficulty slider value.
+            questions = int(self.home.questions_slider.get())   # Get the questions slider value.
+    
+
+    # Method for resetting details specific to the specified window.
+    def reset_details(self, origin):
+        global username, difficulty, difficulty_num, questions
+        if origin == "Completion":
+            username = None
+            difficulty = None
+            difficulty_num = None
+            questions = None
 
 
     # Method for configuring the timer state (enabled/disabled).
@@ -105,7 +123,7 @@ class Scoreboard:
         main_window.columnconfigure(0, weight=1, minsize=850)
 
         # Set up the menu bar.
-        scoreboard_menubar = Menu(main_window)
+        scoreboard_menubar = Menu(main_window)  # Create a new menu bar.
 
         file_menu = Menu(scoreboard_menubar, tearoff=0)
         scoreboard_menubar.add_cascade(label="File", menu=file_menu)
@@ -140,7 +158,7 @@ class Scoreboard:
 
         # Create the buttons.
         CTk.CTkButton(top_frame1, text="Delete", width=200).grid(column=1, row=0, sticky=EW, padx=(0,5), pady=(0,5))
-        CTk.CTkButton(top_frame1, text="Home", command=lambda: self.quiz.reset_timer("home"), width=200).grid(column=2, row=0, sticky=EW, padx=(5,0), pady=(0,5))
+        CTk.CTkButton(top_frame1, text="Home", command=lambda: self.tools.clear_widget(self.home.setup_homepage, True, None, None, None), width=200).grid(column=2, row=0, sticky=EW, padx=(5,0), pady=(0,5))
         CTk.CTkButton(top_frame1, text="View Answers", width=200).grid(column=1, row=1, sticky=EW, padx=(0,5), pady=(5,0))
         CTk.CTkButton(top_frame1, text="Retry Quiz", width=200).grid(column=2, row=1, sticky=EW, padx=(5,0), pady=(5,0))
 
@@ -191,8 +209,14 @@ class Completion:
 
 
     def setup_completion(self):
+        global username, difficulty, difficulty_num, questions, users
+        
         self.final_score = f"{self.quiz.score}/{questions}"
-        users.append([username, difficulty, questions, self.quiz.total_time, self.final_score])  # Add the next user and their quiz details to the "users" list.
+        if timer.get() == True:
+            self.time = self.quiz.total_time
+        else:
+            self.time = "Disabled"
+        users.append([username, difficulty, questions, self.time, self.final_score])  # Add the next user and their quiz details to the "users" list.
         
         # Set width for column 0 (1 total) in the main window. Setting the main window size before element creation ensures the window doesn't glitch between sizes.
         main_window.columnconfigure(0, weight=0, minsize=450)
@@ -245,8 +269,8 @@ class Completion:
         # Create the buttons.
         CTk.CTkButton(button_frame, text="View Answers", width=200).grid(column=0, row=0, sticky=EW, padx=(0,5), pady=(0,5))
         CTk.CTkButton(button_frame, text="Retry Quiz", width=200).grid(column=1, row=0, sticky=EW, padx=(5,0), pady=(0,5))
-        CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.quiz.reset_timer("scoreboard"), width=200).grid(column=0, row=1, sticky=EW, padx=(0,5), pady=(5,0))
-        CTk.CTkButton(button_frame, text="Home", command=lambda: self.quiz.reset_timer("home"), width=200).grid(column=1, row=1, sticky=EW, padx=(5,0), pady=(5,0))
+        CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.quiz.reset_timer("Scoreboard", "Completion"), width=200).grid(column=0, row=1, sticky=EW, padx=(0,5), pady=(5,0))
+        CTk.CTkButton(button_frame, text="Home", command=lambda: self.quiz.reset_timer("Home", "Completion"), width=200).grid(column=1, row=1, sticky=EW, padx=(5,0), pady=(5,0))
 
 
 
@@ -259,53 +283,107 @@ class Quiz:
         self.completion = completion_instance   # Store a reference to the "Completion" class instance.
         self.home = homepage_instance           # Store a reference to the "Home" class instance.
         self.question_no = 1                    # Variable for keeping track of which question the user is on, with the default value being 1.
-        self.timer_active = False
+        self.timer_active = False               # Variable to store the state of the timer, defaulting to False (off).
         self.elapsed_time = 0                   # Variable to store the elapsed time, defaulting to 0.
-        self.time_string = "00:00:00"
-        self.total_time = "00:00:00"
-        self.user_answers = []
-        self.correct_answers = []
-        self.completion.final_score = "0/0"
-        self.score = 0
+        self.calculated_elapsed_time = 0        # Variable to store the calculated elapsed time, defaulting to 0.
+        self.quiz_start_time = None             # Variable to store the start time of the quiz, defaulting to None.
+        self.pause_start_time = None            # Variable to store the start time of the quiz pause, defaulting to None.
+        self.total_paused_time = 0              # Variable to store the total paused time, defaulting to 0.
+        self.time_string = "00:00:00"           # Variable to store the formatted time string, defaulting to "00:00:00".
+        self.total_time = "00:00:00"            # Variable to store the formatted total time, defaulting to "00:00:00".
+        self.user_answers = []                  # Inalise a list to store the user's answers, defaulting to an empty list.
+        self.correct_answers = []               # Inalise a list to store the predefined correct answers, defaulting to an empty list.
+        self.completion.final_score = "0/0"     # Variable to store the final score, defaulting to "0/0".
+        self.score = 0                          # Variable to store the active score during the quiz, defaulting to 0.
 
 
     def start_timer(self):
         self.timer_active = True
-        self.update_timer()
+        # Only set the quiz start time on the first run of the timer loop (not after unpausing)
+        if self.quiz_start_time == None:
+            self.quiz_start_time = time.time()  # Record the current time as quiz start time.
+        self.timer_loop()  # Start the timer update loop.
 
 
-    def stop_timer(self, command):
+    def stop_timer(self, command, origin):
         self.timer_active = False
-        if command == "home":
-            self.reset_timer("home")
+        # Cancel the "after" job if it is currently still running.
+        if hasattr(self, "timer_job") and self.timer_job != None:
+            self.timer_lbl.after_cancel(self.timer_job)
+            self.timer_job = None
+        
+        if command == "Home":
+            self.reset_timer("Home", origin)
 
 
-    def reset_timer(self, command):
+    def reset_timer(self, command, origin):
+        self.quiz_start_time = None
+        self.pause_start_time = None
+        self.total_paused_time = 0        
         self.elapsed_time = 0
+        self.calculated_elapsed_time = 0
         self.time_string = "00:00:00"
         self.total_time = "00:00:00"
-        if command == "home" or command == "scoreboard":
+
+        if command == "Home" or command == "Scoreboard":
             self.user_answers.clear()
+            if origin != None: self.tools.reset_details(origin)  # If the origin is not None, reset the details (origin is only specified for the completion page).
             self.question_no = 1
             self.score = 0
-            if command == "home":
+            if command == "Home":
                 self.tools.clear_widget(self.home.setup_homepage, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the home page.
-            elif command == "scoreboard":
+            elif command == "Scoreboard":
                 self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the scoreboard page.
 
 
-    def update_timer(self):
-        if self.timer_active:
-            # Format seconds to HH:MM:SS
+    def pause_quiz(self):
+        self.stop_timer(None, None)
+        self.pause_start_time = time.time()  # Record the real-world time for when the pause started.
+        self.pause_btn.configure(command=self.unpause_quiz)
+        
+        # Create a pause overlay to visually block the quiz content until the quiz is unpaused.
+        height = self.question_frame.winfo_height() + self.answer_frame.winfo_height() + 10  # Get the total height of both frames (question and answer frames), including the height of padding.
+        self.pause_frame = CTk.CTkFrame(main_window)
+        self.pause_frame.grid(column=0, row=2, rowspan=2, sticky=EW, padx=20, pady=(5,20))
+        
+        # Set width for column 0 (1 total) and row 0 (1 total) in the pause frame.
+        self.pause_frame.columnconfigure(0, weight=0, minsize=410)
+        self.pause_frame.rowconfigure(0, weight=0, minsize=height)
+
+        CTk.CTkLabel(self.pause_frame, text="Quiz Paused", font=("Segoe UI", 20, "bold")).grid(column=0, row=0, columnspan=2, sticky=EW)
+        
+
+    def unpause_quiz(self):
+        if self.pause_start_time != None:
+            # Calculate how long the pause lasted and add it to the total paused duration.
+            pause_duration = time.time() - self.pause_start_time
+            self.total_paused_time += pause_duration
+            self.pause_start_time = None  # Reset the pause start time tracker to be used again for the next pause.
+        
+        # Remove the pause overlay and restore the pause button to its original command, then start the timer again.
+        self.pause_frame.destroy()
+        self.pause_btn.configure(command=self.pause_quiz)
+        self.start_timer()
+        
+
+    def timer_loop(self):
+        if self.timer_active == True:
+            current_time = time.time()  # Get the current real-world time in seconds.
+            
+            # Calculate how long the quiz has been running in total and subtract all time spent paused.
+            self.calculated_elapsed_time = int(current_time - self.quiz_start_time - self.total_paused_time)
+            self.elapsed_time = self.calculated_elapsed_time
+
+            # Format the total seconds into HH:MM:SS format
             # Divide total seconds by 3600 (as there are 3600 seconds in an hour) to get the number of full hours.
-            hours = self.elapsed_time // 3600  # Floor division (//) divides and rounds down to the nearest whole number.
+            hours = self.calculated_elapsed_time // 3600  # Floor division (//) divides and rounds down to the nearest whole number.
             
             # Modulo (%) by 3600 to remove full hours and get the remaining seconds.
             # Then divide the remaining seconds by 60 to get minutes as a whole number.
-            minutes = (self.elapsed_time % 3600) // 60  # Modulo (%) divides and gives the remainder after division, then floor division (//) gives the full minutes.
+            minutes = (self.calculated_elapsed_time % 3600) // 60  # Modulo (%) divides and gives the remainder after division, then floor division (//) gives the full minutes.
             
             # Modulo (%) by 60 (as there are 60 seconds in a minute) to remove the full minutes and get the remaining seconds.
-            seconds = self.elapsed_time % 60
+            seconds = self.calculated_elapsed_time % 60
             
             # Format the time as HH:MM:SS, padding with zeros instead of spaces (":0"), and with a minimum of 2 digits ("2") for each part.
             self.time_string = f"{hours:02}:{minutes:02}:{seconds:02}"  
@@ -315,9 +393,13 @@ class Quiz:
             if timer.get() == True:
                 self.timer_lbl.configure(text=f"Time: {self.time_string}")
 
-            # Increment and schedule next update
-            self.elapsed_time += 1
-            self.timer_lbl.after(1000, self.update_timer)
+            # Schedule the next increment and update after 1 second (1000 milliseconds).
+            self.timer_job = self.timer_lbl.after(1000, self.update_timer)
+
+
+    def update_timer(self):
+        self.elapsed_time += 1
+        self.timer_loop()
 
 
     def answer_management(self, answer):
@@ -331,13 +413,13 @@ class Quiz:
             self.question_no += 1
             self.question_no_lbl.configure(text=f"Question {self.question_no}/{questions}")  # Update the question number label.
         else:
-            self.stop_timer(None)
+            self.stop_timer(None, None)
             self.tools.clear_widget(self.completion.setup_completion, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the completion page.
 
 
     # Procedure for setting up the UI elements consisting of images, labels, entry boxes, sliders (scales), and buttons.
     def setup_quiz(self):
-        
+
         # Set width for column 0 (1 total) in the main window. Setting the main window size before element creation ensures the window doesn't glitch between sizes.
         main_window.columnconfigure(0, weight=0, minsize=450)
 
@@ -348,7 +430,7 @@ class Quiz:
         quiz_menubar.add_cascade(label="Quiz", menu=quiz_menu)
         quiz_menu.add_command(label="Restart Quiz", accelerator="Ctrl+R")
         quiz_menu.add_command(label="New Quiz", accelerator="Ctrl+N")
-        quiz_menu.add_command(label="Exit Quiz", accelerator="Esc", command=lambda: self.stop_timer("home"))
+        quiz_menu.add_command(label="Exit Quiz", accelerator="Esc", command=lambda: self.stop_timer("Home", None))
 
         settings_menu = Menu(quiz_menubar, tearoff=0)
         quiz_menubar.add_cascade(label="Settings", menu=settings_menu)
@@ -376,7 +458,8 @@ class Quiz:
         # Create the labels and pause button to be placed at the top of the quiz page.
         self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{questions}", font=("Segoe UI", 14, "bold"))
         self.question_no_lbl.grid(column=0, row=0, pady=10, sticky=NSEW)
-        CTk.CTkButton(quiz_dtls_frame1, text="P", font=("Segoe UI", 14, "bold"), width=30).grid(column=1, row=0, pady=10)
+        self.pause_btn = CTk.CTkButton(quiz_dtls_frame1, text="P", font=("Segoe UI", 14, "bold"), width=30, command=self.pause_quiz)
+        self.pause_btn.grid(column=1, row=0, pady=10)
         self.timer_lbl = CTk.CTkLabel(quiz_dtls_frame1, text="", font=("Segoe UI", 14, "bold"))  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
         self.timer_lbl.grid(column=2, row=0, pady=10, sticky=NSEW)
         if timer.get() == True:
@@ -385,24 +468,24 @@ class Quiz:
             self.tools.timer_config("Quiz", "Disable")
 
         # Create a frame for the question label or question image.
-        question_frame = CTk.CTkFrame(main_window)
-        question_frame.grid(column=0, row=2, sticky=EW, padx=20, pady=5)
+        self.question_frame = CTk.CTkFrame(main_window)
+        self.question_frame.grid(column=0, row=2, sticky=EW, padx=20, pady=5)
         # Set width for column 0 (1 total) and row 0 (1 total) in quiz details frame 1.
-        question_frame.columnconfigure(0, weight=0, minsize=410)
-        question_frame.rowconfigure(0, weight=0, minsize=205)
+        self.question_frame.columnconfigure(0, weight=0, minsize=410)
+        self.question_frame.rowconfigure(0, weight=0, minsize=205)
 
         # Create a canvas for the question image.
         #question_canvas = CTk.CTkCanvas(question_frame, bd=0, highlightthickness=0)
         #question_canvas.grid(row=0, column=0, pady=10)
-        question_lbl = CTk.CTkLabel(question_frame, text="It's looking a little empty...", font=("Segoe UI", 20, "bold"))
-        question_lbl.grid(column=0, row=0, pady=10)
+        question_lbl = CTk.CTkLabel(self.question_frame, text="It's looking a little empty...", font=("Segoe UI", 20, "bold"))
+        question_lbl.grid(column=0, row=0)
 
         # Create a frame for the answer buttons
-        answer_frame = CTk.CTkFrame(main_window, fg_color="transparent")
-        answer_frame.grid(column=0, row=3, sticky=EW, padx=20, pady=(5,20))
+        self.answer_frame = CTk.CTkFrame(main_window, fg_color="transparent")
+        self.answer_frame.grid(column=0, row=3, sticky=EW, padx=20, pady=(5,20))
         # Set width for columns 0-1 (2 total) in the answer frame. Total minimum column width is 410px.
-        answer_frame.columnconfigure(0, weight=0, minsize=205)
-        answer_frame.columnconfigure(1, weight=0, minsize=205)
+        self.answer_frame.columnconfigure(0, weight=0, minsize=205)
+        self.answer_frame.columnconfigure(1, weight=0, minsize=205)
         
         # Create the answer values.
         answer_1 = "Yes"
@@ -426,13 +509,13 @@ class Quiz:
         self.correct_answers = ["A"] * questions
 
         # Create the answer buttons.
-        btn_1 = CTk.CTkButton(answer_frame, text=f" A.    {answer_1}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("A"), anchor=W, width=200, height=40)
+        btn_1 = CTk.CTkButton(self.answer_frame, text=f" A.    {answer_1}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("A"), anchor=W, width=200, height=40)
         btn_1.grid(column=0, row=0, padx=(0, 5), pady=(0,5))
-        btn_2 = CTk.CTkButton(answer_frame, text=f" B.    {answer_2}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("B"), anchor=W, width=200, height=40)
+        btn_2 = CTk.CTkButton(self.answer_frame, text=f" B.    {answer_2}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("B"), anchor=W, width=200, height=40)
         btn_2.grid(column=1, row=0, padx=(5, 0), pady=(0,5))
-        btn_3 = CTk.CTkButton(answer_frame, text=f" C.    {answer_3}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("C"), anchor=W, width=200, height=40)
+        btn_3 = CTk.CTkButton(self.answer_frame, text=f" C.    {answer_3}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("C"), anchor=W, width=200, height=40)
         btn_3.grid(column=0, row=1, padx=(0, 5), pady=(5,0))
-        btn_4 = CTk.CTkButton(answer_frame, text=f" D.    {answer_4}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("D"), anchor=W, width=200, height=40)
+        btn_4 = CTk.CTkButton(self.answer_frame, text=f" D.    {answer_4}", font=("Segoe UI", 16, "bold"), command=lambda: self.answer_management("D"), anchor=W, width=200, height=40)
         btn_4.grid(column=1, row=1, padx=(5, 0), pady=(5,0))
 
         self.start_timer()
@@ -447,7 +530,7 @@ class Home:
         self.scoreboard = scoreboard_instance   # Store a reference to the "Scoreboard" class instance.
         self.completion = completion_instance   # Store a reference to the "Completion" class instance.
         self.quiz = quiz_instance               # Store a reference to the "Quiz" class instance.
-    
+
 
     # Procedure for updating the difficulty and question number labels based on the interpreted slider values.
     def slider_value_update(self, slider_id, value):
@@ -513,6 +596,16 @@ class Home:
         self.difficulty_slider.grid(column=1, row=1, padx=5, pady=10, sticky=EW)
         self.questions_slider = CTk.CTkSlider(home_frame1, from_=5, to=35, number_of_steps=30, command=lambda value: self.slider_value_update("S2", value), orientation=HORIZONTAL)
         self.questions_slider.grid(column=1, row=2, padx=5, pady=(0,10), sticky=EW)
+        
+        # Update the value of the entry box and the sliders (scales) with the previously recorded values (used for going from scoreboard back to homepage).
+        if username != None:
+            self.username_entry.insert(0, username)
+        if difficulty_num != None:
+            self.difficulty_slider.set(difficulty_num)
+        if questions != None:
+            self.questions_slider.set(questions)
+
+        # Update the labels next to the sliders with their relevant values.
         self.slider_value_update("S1", self.difficulty_slider.get())
         self.slider_value_update("S2", self.questions_slider.get())
 
@@ -526,13 +619,13 @@ class Home:
         button_frame.columnconfigure(1, weight=0, minsize=205)
 
         # Create the buttons.
-        CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, "Scoreboard"), width=200).grid(column=0, row=1, sticky=EW, padx=(0,5))
-        CTk.CTkButton(button_frame, text="Start", command=lambda: self.tools.clear_widget(self.quiz.setup_quiz, True, None, None, "Home"), width=200).grid(column=1, row=1, sticky=EW, padx=(5,0))
+        CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, self.tools.save_details("Home")), width=200).grid(column=0, row=1, sticky=EW, padx=(0,5))
+        CTk.CTkButton(button_frame, text="Start", command=lambda: self.tools.clear_widget(self.quiz.setup_quiz, True, None, None, self.tools.save_details("Home")), width=200).grid(column=1, row=1, sticky=EW, padx=(5,0))
 
 
 # Main function for starting the program.
 def main(): 
-    global main_window, users, timer_showing, timer
+    global main_window, users, timer_showing, timer, username, difficulty_num, questions
     
     main_window = Tk()                          # Initialise the main window. For scaling reasons, use a Tk window with CTk elements.
     main_window.title("QWhizz Math")            # Set the title of the window.
@@ -547,6 +640,9 @@ def main():
     timer_showing = None            # Initialise a flag to track whether the timer is being displayed or not.
     # Create a "timer" BooleanVar to control the timer checkbutton state, with the default value being True, putting the checkbutton in an on state.
     timer = BooleanVar(value=True)  # Global reference to the timer checkbutton state.
+    username = None                         # Initialise the username attribute as None.
+    difficulty_num = None                   # Initialise the difficulty_num attribute as None.
+    questions = None                        # Initialise the questions attribute as None.
 
     # Set up the class instances.
     # The classes (Tools, Scoreboard, Completion, Quiz, and Home) reference each other, so some instances are first given placeholder values (None) and are linked once the other necessary instances are created.
