@@ -11,7 +11,8 @@ from PIL import Image, ImageTk
 class Tools:
     # Constructor for the "Quiz" class, which takes an instance of the class names as a parameter and stores it in their unique attributes.
     # This allows attributes and methods defined in the "Completion" class, for example, to be accessed from within the "Tools" class.
-    def __init__(self, completion_instance, quiz_instance, homepage_instance):
+    def __init__(self, scoreboard_instance, completion_instance, quiz_instance, homepage_instance):
+        self.scoreboard = scoreboard_instance   # Store a reference to the "Scoreboard" class instance.
         self.completion = completion_instance   # Store a reference to the "Completion" class instance.
         self.quiz = quiz_instance               # Store a reference to the "Quiz" class instance.
         self.home = homepage_instance           # Store a reference to the "Home" class instance.
@@ -20,7 +21,7 @@ class Tools:
     # Method for clearing all widgets or clearing specified widgets (column, row).
     def clear_widget(self, procedure, all_widgets, column, row, save_details):
         global username, difficulty, questions
-        if save_details == "Home":
+        if save_details == "Home" or save_details == "Scoreboard":
             username = self.home.username_entry.get()
             questions = int(self.home.questions_slider.get())
 
@@ -62,34 +63,139 @@ class About:
         self.about_window.title("About")
         self.about_window.columnconfigure(0, weight=0, minsize=300)
         self.about_window.resizable(False, False)
-        self.about_window.transient(main_window)  # Keep on top of parent
+        self.about_window.update_idletasks()  # Process any pending events for the window before calculating the centre position later.
+        
+        # Centre the "About" window above the main window.
+        x = main_window.winfo_x() + main_window.winfo_width() // 2 - self.about_window.winfo_width() // 2 - 50
+        y = main_window.winfo_y() + main_window.winfo_height() // 2 - self.about_window.winfo_height() // 2 + 50
+        self.about_window.geometry(f"+{x}+{y}")
+        
+        self.about_window.transient(main_window)  # Keep on top of parent window (main_window)
         self.about_window.lift()
         self.about_window.focus()
 
         # Add program details and a close button.
-        CTk.CTkLabel(self.about_window, text="QWhizz Math\nVersion 1.0\n© 2025 Jack Compton", justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=10)
-        CTk.CTkButton(self.about_window, text="Close", command=self.close).grid(row=1, column=0, padx=10, sticky=EW, pady=10)
+        CTk.CTkLabel(self.about_window, text="QWhizz Math\nVersion 1.0\n© 2025 Jack Compton", justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20,10))
+        CTk.CTkButton(self.about_window, text="Close", command=self.close).grid(row=1, column=0, sticky=EW, padx=10, pady=10)
 
         # Override the window close (X) button behavior so that the main window is enabled again when the about window is closed using this button.
         self.about_window.protocol("WM_DELETE_WINDOW", self.close)
 
+        # Bind the "esc" key to the "close" function so that the window can be closed by pressing "esc".
+        self.about_window.bind("<Escape>", self.close)
 
-    def close(self):
-        main_window.attributes("-disabled", False)
+
+    def close(self, event=None):  # Add "event" parameter to allow for "event" to be passed when the binded "esc" key is pressed (though the bind doesn't include an event).
+        self.about_window.unbind("<Escape>")  # Unbind the "esc" key from the "close" function so that "esc" can be used for other purposes later.
+        main_window.attributes("-disabled", False)  # Re-enable the main window so that it can be interacted.
         self.about_window.destroy()
 
 
 
+class Scoreboard:
+    def __init__(self, tools_instance, completion_instance, quiz_instance, homepage_instance):
+        self.tools = tools_instance             # Store a reference to the "Tools" class instance.
+        self.completion = completion_instance   # Store a reference to the "Completion" class instance.
+        self.quiz = quiz_instance               # Store a reference to the "Quiz" class instance.
+        self.home = homepage_instance           # Store a reference to the "Home" class instance.
+
+
+    def setup_scoreboard(self):
+        # Set width for column 0 (1 total) in the main window. Positive weight means the column will expand to fill the available space.
+        main_window.columnconfigure(0, weight=1, minsize=850)
+
+        # Set up the menu bar.
+        scoreboard_menubar = Menu(main_window)
+
+        file_menu = Menu(scoreboard_menubar, tearoff=0)
+        scoreboard_menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Print Selected", accelerator="Ctrl+P")
+        file_menu.add_command(label="Print All", accelerator="Ctrl+Shift+P")
+        file_menu.add_command(label="Delete Selected", accelerator="Del")
+        file_menu.add_command(label="Delete All", accelerator="Shift+Del")
+
+        settings_menu = Menu(scoreboard_menubar, tearoff=0)
+        scoreboard_menubar.add_cascade(label="Settings", menu=settings_menu)
+        timer_settings = Menu(scoreboard_menubar, tearoff=0)
+        settings_menu.add_cascade(menu=timer_settings, label="Timer")
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True)
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False)
+
+        help_menu = Menu(scoreboard_menubar, tearoff=0)
+        scoreboard_menubar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="Documentation")
+        help_menu.add_command(label="About", command=About)
+
+        main_window.config(menu=scoreboard_menubar)
+        
+        # Set up a frame to place the main scoreboard top elements inside.
+        top_frame1 = CTk.CTkFrame(main_window, fg_color="transparent")
+        top_frame1.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,5))
+        top_frame1._set_appearance_mode("light")
+
+        # Set width for columns 0-2 (3 total) in top frame 1. Total minimum column width is 810px.
+        top_frame1.columnconfigure(0, weight=1, minsize=300)
+        top_frame1.columnconfigure(1, weight=0, minsize=205)
+        top_frame1.columnconfigure(2, weight=0, minsize=205)
+
+        # Create the buttons.
+        CTk.CTkButton(top_frame1, text="Delete", width=200).grid(column=1, row=0, sticky=EW, padx=(0,5), pady=(0,5))
+        CTk.CTkButton(top_frame1, text="Home", command=lambda: self.quiz.reset_timer("home"), width=200).grid(column=2, row=0, sticky=EW, padx=(5,0), pady=(0,5))
+        CTk.CTkButton(top_frame1, text="View Answers", width=200).grid(column=1, row=1, sticky=EW, padx=(0,5), pady=(5,0))
+        CTk.CTkButton(top_frame1, text="Retry Quiz", width=200).grid(column=2, row=1, sticky=EW, padx=(5,0), pady=(5,0))
+
+        # Set up a frame to place the main scoreboard top elements inside.
+        content_frame1 = CTk.CTkFrame(main_window)
+        content_frame1.grid(column=0, row=1, sticky=EW, padx=20, pady=(5,20))
+        content_frame1._set_appearance_mode("light")
+
+        # Set width for columns 0-5 (6 total) in content frame 1. Total minimum column width is 810px.
+        content_frame1.columnconfigure(0, weight=1, minsize=75)
+        content_frame1.columnconfigure(1, weight=1, minsize=290)
+        content_frame1.columnconfigure(2, weight=1, minsize=125)
+        content_frame1.columnconfigure(3, weight=1, minsize=120)
+        content_frame1.columnconfigure(4, weight=1, minsize=100)
+        content_frame1.columnconfigure(5, weight=1, minsize=100)
+
+        # Clear previous entries
+        for widget in content_frame1.grid_slaves():
+            if int(widget.grid_info()["row"]) > 0:  # Checks if the widget is in a row larger than 0, which is where user details are displayed.
+                widget.grid_forget()                # Remove the widget from the grid by forgetting it
+
+        # Create the column headings
+        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Ref #").grid(column=0, row=0, sticky=EW, padx=5, pady=5)
+        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Username").grid(column=1, row=0, sticky=W, padx=5, pady=5)
+        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Difficulty").grid(column=2, row=0, sticky=W, padx=5, pady=5)
+        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Questions").grid(column=3, row=0, sticky=W, padx=5, pady=5)
+        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Time").grid(column=4, row=0, sticky=W, padx=5, pady=5)
+        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Score").grid(column=5, row=0, sticky=W, padx=5, pady=5)
+        
+        # Add each item in the list into its own row
+        for index, details in enumerate(users):
+            list_row = index + 1
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=index + 1).grid(column=0, row=list_row, sticky=EW, padx=5, pady=5)
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[0]).grid(column=1, row=list_row, sticky=W, padx=5, pady=5)
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[1]).grid(column=2, row=list_row, sticky=W, padx=5, pady=5)
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[2]).grid(column=3, row=list_row, sticky=W, padx=5, pady=5)
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[3]).grid(column=4, row=list_row, sticky=W, padx=5, pady=5)
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[4]).grid(column=5, row=list_row, sticky=W, padx=5, pady=5)
+
+
+
 class Completion:
-    def __init__(self, tools_instance, quiz_instance, homepage_instance):
-        self.tools = tools_instance     # Store a reference to the "Tools" class instance.
-        self.quiz = quiz_instance       # Store a reference to the "Quiz" class instance.
-        self.home = homepage_instance  # Store a reference to the "Home" class instance.
+    def __init__(self, tools_instance, scoreboard_instance, quiz_instance, homepage_instance):
+        self.tools = tools_instance             # Store a reference to the "Tools" class instance.
+        self.scoreboard = scoreboard_instance   # Store a reference to the "Scoreboard" class instance.
+        self.quiz = quiz_instance               # Store a reference to the "Quiz" class instance.
+        self.home = homepage_instance           # Store a reference to the "Home" class instance.
 
 
     def setup_completion(self):
-        # Set width for column 0 (1 total) in the main window. Positive weight means the column will expand to fill the available space.
-        main_window.columnconfigure(0, weight=1, minsize=430)
+        self.final_score = f"{self.quiz.score}/{questions}"
+        users.append([username, difficulty, questions, self.quiz.total_time, self.final_score])  # Add the next user and their quiz details to the "users" list.
+        
+        # Set width for column 0 (1 total) in the main window. Setting the main window size before element creation ensures the window doesn't glitch between sizes.
+        main_window.columnconfigure(0, weight=0, minsize=450)
 
         # Set up the menu bar.
         completion_menubar = Menu(main_window)  # Create a new menu bar.
@@ -110,7 +216,7 @@ class Completion:
 
         # Set up a home frame to place the main home elements inside.
         completion_frame1 = CTk.CTkFrame(main_window)
-        completion_frame1.grid(column=0, row=0, sticky=EW, padx=10, pady=(10,5))
+        completion_frame1.grid(column=0, row=0, sticky=EW, padx=20, pady=(10,5))
         completion_frame1._set_appearance_mode("light")
 
         # Set width for columns 0-2 (3 total) in content frame 1. Total minimum column width is 350px so that the frame will resize to fit the content.
@@ -130,7 +236,7 @@ class Completion:
 
         # Create a frame to place the buttons inside.
         button_frame = CTk.CTkFrame(main_window, fg_color="transparent")
-        button_frame.grid(column=0, row=1, sticky=EW, padx=10, pady=(5,10))
+        button_frame.grid(column=0, row=1, sticky=EW, padx=20, pady=(5,10))
         button_frame._set_appearance_mode("light")
         # Set width for columns 0-1 (2 total) in the answer frame. Total minimum column width is 410px.
         button_frame.columnconfigure(0, weight=1, minsize=205)
@@ -139,7 +245,7 @@ class Completion:
         # Create the buttons.
         CTk.CTkButton(button_frame, text="View Answers", width=200).grid(column=0, row=0, sticky=EW, padx=(0,5), pady=(0,5))
         CTk.CTkButton(button_frame, text="Retry Quiz", width=200).grid(column=1, row=0, sticky=EW, padx=(5,0), pady=(0,5))
-        CTk.CTkButton(button_frame, text="Scoreboard", width=200).grid(column=0, row=1, sticky=EW, padx=(0,5), pady=(5,0))
+        CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.quiz.reset_timer("scoreboard"), width=200).grid(column=0, row=1, sticky=EW, padx=(0,5), pady=(5,0))
         CTk.CTkButton(button_frame, text="Home", command=lambda: self.quiz.reset_timer("home"), width=200).grid(column=1, row=1, sticky=EW, padx=(5,0), pady=(5,0))
 
 
@@ -147,25 +253,20 @@ class Completion:
 class Quiz:
     # Constructor for the "Quiz" class, which takes an instance of the class names as a parameter and stores it in their unique attributes.
     # This allows attributes and methods defined in the "Home" class, for example, to be accessed from within the "Quiz" class.
-    def __init__(self, tools_instance, completion_instance, homepage_instance):
+    def __init__(self, tools_instance, scoreboard_instance, completion_instance, homepage_instance):
         self.tools = tools_instance             # Store a reference to the "Tools" class instance.
+        self.scoreboard = scoreboard_instance   # Store a reference to the "Scoreboard" class instance.
         self.completion = completion_instance   # Store a reference to the "Completion" class instance.
         self.home = homepage_instance           # Store a reference to the "Home" class instance.
-        self.question_no = 1        # Variable for keeping track of which question the user is on, with the default value being 1.
+        self.question_no = 1                    # Variable for keeping track of which question the user is on, with the default value being 1.
         self.timer_active = False
-        self.elapsed_time = 0       # Variable to store the elapsed time, defaulting to 0.
+        self.elapsed_time = 0                   # Variable to store the elapsed time, defaulting to 0.
         self.time_string = "00:00:00"
         self.total_time = "00:00:00"
         self.user_answers = []
         self.correct_answers = []
+        self.completion.final_score = "0/0"
         self.score = 0
-
-
-    # Add the next user's quiz details to the list.
-    def append_quiz_details(self):
-        # Append each item to its own area of the list.
-        quiz_details.append([username, difficulty, questions])
-        self.home.username_entry.delete(0, 'end')  # Clear the username entry box.
 
 
     def start_timer(self):
@@ -183,11 +284,14 @@ class Quiz:
         self.elapsed_time = 0
         self.time_string = "00:00:00"
         self.total_time = "00:00:00"
-        if command == "home":
+        if command == "home" or command == "scoreboard":
             self.user_answers.clear()
             self.question_no = 1
             self.score = 0
-            self.tools.clear_widget(self.home.setup_homepage, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the home page.
+            if command == "home":
+                self.tools.clear_widget(self.home.setup_homepage, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the home page.
+            elif command == "scoreboard":
+                self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the scoreboard page.
 
 
     def update_timer(self):
@@ -234,8 +338,8 @@ class Quiz:
     # Procedure for setting up the UI elements consisting of images, labels, entry boxes, sliders (scales), and buttons.
     def setup_quiz(self):
         
-        # Set width for column 0 (1 total) in the main window. Positive weight means the column will expand to fill the available space.
-        main_window.columnconfigure(0, weight=1, minsize=430)
+        # Set width for column 0 (1 total) in the main window. Setting the main window size before element creation ensures the window doesn't glitch between sizes.
+        main_window.columnconfigure(0, weight=0, minsize=450)
 
         # Set up the menu bar.
         quiz_menubar = Menu(main_window)  # Create a new menu bar.
@@ -262,12 +366,12 @@ class Quiz:
 
         # Set up a content frame to place the top quiz elements inside.
         quiz_dtls_frame1 = CTk.CTkFrame(main_window)
-        quiz_dtls_frame1.grid(column=0, row=0, sticky=EW, padx=10, pady=(10,5))
+        quiz_dtls_frame1.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,5))
         quiz_dtls_frame1._set_appearance_mode("light")
-        # Set width for columns 0-2 (3 total) in quiz details frame 1. Total minimum column width is 400px.
-        quiz_dtls_frame1.columnconfigure(0, weight=1, minsize=185)
-        quiz_dtls_frame1.columnconfigure(1, weight=1, minsize=30)
-        quiz_dtls_frame1.columnconfigure(2, weight=1, minsize=185)
+        # Set width for columns 0-2 (3 total) in quiz details frame 1. Total minimum column width is 410px.
+        quiz_dtls_frame1.columnconfigure(0, weight=0, minsize=190)
+        quiz_dtls_frame1.columnconfigure(1, weight=0, minsize=30)
+        quiz_dtls_frame1.columnconfigure(2, weight=0, minsize=190)
 
         # Create the labels and pause button to be placed at the top of the quiz page.
         self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{questions}", font=("Segoe UI", 14, "bold"))
@@ -282,10 +386,10 @@ class Quiz:
 
         # Create a frame for the question label or question image.
         question_frame = CTk.CTkFrame(main_window)
-        question_frame.grid(column=0, row=2, sticky=EW, padx=10, pady=5)
+        question_frame.grid(column=0, row=2, sticky=EW, padx=20, pady=5)
         # Set width for column 0 (1 total) and row 0 (1 total) in quiz details frame 1.
-        question_frame.columnconfigure(0, weight=1, minsize=410)
-        question_frame.rowconfigure(0, weight=1, minsize=205)
+        question_frame.columnconfigure(0, weight=0, minsize=410)
+        question_frame.rowconfigure(0, weight=0, minsize=205)
 
         # Create a canvas for the question image.
         #question_canvas = CTk.CTkCanvas(question_frame, bd=0, highlightthickness=0)
@@ -295,10 +399,10 @@ class Quiz:
 
         # Create a frame for the answer buttons
         answer_frame = CTk.CTkFrame(main_window, fg_color="transparent")
-        answer_frame.grid(column=0, row=3, sticky=EW, padx=10, pady=(5,10))
+        answer_frame.grid(column=0, row=3, sticky=EW, padx=20, pady=(5,20))
         # Set width for columns 0-1 (2 total) in the answer frame. Total minimum column width is 410px.
-        answer_frame.columnconfigure(0, weight=1, minsize=205)
-        answer_frame.columnconfigure(1, weight=1, minsize=205)
+        answer_frame.columnconfigure(0, weight=0, minsize=205)
+        answer_frame.columnconfigure(1, weight=0, minsize=205)
         
         # Create the answer values.
         answer_1 = "Yes"
@@ -338,8 +442,9 @@ class Quiz:
 class Home:
     # Constructor for the "Home" class, which takes an instance of the class names as a parameter and stores it in their unique attributes.
     # This allows attributes and methods defined in the "Quiz" class, for example, to be accessed from within the "Home" class.
-    def __init__(self, tools_instance, completion_instance, quiz_instance):
+    def __init__(self, tools_instance, scoreboard_instance, completion_instance, quiz_instance):
         self.tools = tools_instance             # Store a reference to the "Tools" class instance.
+        self.scoreboard = scoreboard_instance   # Store a reference to the "Scoreboard" class instance.
         self.completion = completion_instance   # Store a reference to the "Completion" class instance.
         self.quiz = quiz_instance               # Store a reference to the "Quiz" class instance.
     
@@ -361,20 +466,11 @@ class Home:
 
     # Procedure for setting up the UI elements consisting of images, labels, entry boxes, sliders (scales), and buttons.
     def setup_homepage(self):
-        global home_menubar
-
-        # Set width for column 0 (1 total) in the main window. Positive weight means the column will expand to fill the available space.
-        main_window.columnconfigure(0, weight=1, minsize=430)
+        # Set width for column 0 (1 total) in the main window. Setting the main window size before element creation ensures the window doesn't glitch between sizes.
+        main_window.columnconfigure(0, weight=0, minsize=450)
 
         # Set up the menu bar.
         home_menubar = Menu(main_window)
-
-        file_menu = Menu(home_menubar, tearoff=0)
-        home_menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Print Selected", accelerator="Ctrl+P")
-        file_menu.add_command(label="Print All", accelerator="Ctrl+Shift+P")
-        file_menu.add_command(label="Delete Selected", accelerator="Del")
-        file_menu.add_command(label="Delete All", accelerator="Shift+Del")
 
         settings_menu = Menu(home_menubar, tearoff=0)
         home_menubar.add_cascade(label="Settings", menu=settings_menu)
@@ -392,23 +488,23 @@ class Home:
 
         # Set up a home frame to place the main home elements inside.
         home_frame1 = CTk.CTkFrame(main_window)
-        home_frame1.grid(column=0, row=0, sticky=EW, padx=10, pady=(10,5))
+        home_frame1.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,5))
         home_frame1._set_appearance_mode("light")
 
-        # Set width for columns 0-2 (3 total) in content frame 1. Total minimum column width is 350px so that the frame will resize to fit the content.
-        home_frame1.columnconfigure(0, weight=1, minsize=100)
-        home_frame1.columnconfigure(1, weight=1, minsize=150)
-        home_frame1.columnconfigure(2, weight=1, minsize=100)
+        # Set width for columns 0-2 (3 total) in home frame 1. Total minimum column width is 410px.
+        home_frame1.columnconfigure(0, weight=0, minsize=100)
+        home_frame1.columnconfigure(1, weight=0, minsize=210)
+        home_frame1.columnconfigure(2, weight=0, minsize=100)
 
         # Create the labels to be placed next to their relevant entry boxes.
-        CTk.CTkLabel(home_frame1, text="Username").grid(column=0, row=0, sticky=E, padx=5, pady=(10,0))
-        CTk.CTkLabel(home_frame1, text="Difficulty").grid(column=0, row=1, sticky=E, padx=5, pady=10)
-        CTk.CTkLabel(home_frame1, text="Questions").grid(column=0, row=2, sticky=E, padx=5, pady=(0,10))
-        
-        self.difficulty_lbl = CTk.CTkLabel(home_frame1, text="", width=10)          # Create an empty placeholder label to display the difficulty level.
-        self.difficulty_lbl.grid(column=2, row=1, sticky=W, padx=5, pady=10)
-        self.question_amnt_lbl = CTk.CTkLabel(home_frame1, text="", width=10)     # Create an empty placeholder label to display the number of questions.
-        self.question_amnt_lbl.grid(column=2, row=2, sticky=W, padx=5, pady=(0,10))
+        CTk.CTkLabel(home_frame1, text="Username").grid(column=0, row=0, sticky=E, padx=(0,5), pady=(10,0))
+        CTk.CTkLabel(home_frame1, text="Difficulty").grid(column=0, row=1, sticky=E, padx=(0,5), pady=10)
+        CTk.CTkLabel(home_frame1, text="Questions").grid(column=0, row=2, sticky=E, padx=(0,5), pady=(0,10))
+
+        self.difficulty_lbl = CTk.CTkLabel(home_frame1, text="")      # Create an empty placeholder label to display the difficulty level.
+        self.difficulty_lbl.grid(column=2, row=1, sticky=W, padx=(5,0), pady=10)
+        self.question_amnt_lbl = CTk.CTkLabel(home_frame1, text="")   # Create an empty placeholder label to display the number of questions.
+        self.question_amnt_lbl.grid(column=2, row=2, sticky=W, padx=(5,0), pady=(0,10))
 
         # Setup entry box and sliders (scales).
         self.username_entry = CTk.CTkEntry(home_frame1)
@@ -419,56 +515,59 @@ class Home:
         self.questions_slider.grid(column=1, row=2, padx=5, pady=(0,10), sticky=EW)
         self.slider_value_update("S1", self.difficulty_slider.get())
         self.slider_value_update("S2", self.questions_slider.get())
-        
+
         # Create a frame to place the buttons inside.
         button_frame = CTk.CTkFrame(main_window, fg_color="transparent")
-        button_frame.grid(column=0, row=1, sticky=EW, padx=10, pady=(5,10))
+        button_frame.grid(column=0, row=1, sticky=EW, padx=20, pady=(5,20))
         button_frame._set_appearance_mode("light")
-        # Set width for columns 0-1 (2 total) in the answer frame. Total minimum column width is 410px.
-        button_frame.columnconfigure(0, weight=1, minsize=205)
-        button_frame.columnconfigure(1, weight=1, minsize=205)
+        
+        # Set width for columns 0-1 (2 total) in the button frame. Total minimum column width is 410px.
+        button_frame.columnconfigure(0, weight=0, minsize=205)
+        button_frame.columnconfigure(1, weight=0, minsize=205)
 
         # Create the buttons.
-        CTk.CTkButton(button_frame, text="Scoreboard", width=200).grid(column=0, row=1, sticky=EW, padx=(0,5))
+        CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, "Scoreboard"), width=200).grid(column=0, row=1, sticky=EW, padx=(0,5))
         CTk.CTkButton(button_frame, text="Start", command=lambda: self.tools.clear_widget(self.quiz.setup_quiz, True, None, None, "Home"), width=200).grid(column=1, row=1, sticky=EW, padx=(5,0))
-
 
 
 # Main function for starting the program.
 def main(): 
-    global main_window, quiz_details, timer_showing, timer
+    global main_window, users, timer_showing, timer
     
-    # Initialise global lists and variables.
-    quiz_details = []               # Create empty list for user details so that their quiz results can be stored inside.
-    timer_showing = None            # Initialise a flag to track whether the timer is being displayed or not.
-
-    #Initialise the main window.
-    main_window = Tk()  # For scaling reasons, use a Tk window with CTk elements.
-    main_window.title("QWhizz Math")  # Set the title of the window.
+    main_window = Tk()                          # Initialise the main window. For scaling reasons, use a Tk window with CTk elements.
+    main_window.title("QWhizz Math")            # Set the title of the window.
     #main_window.iconphoto(False, PhotoImage(file="Images/Pgm_icon.png"))  # Set the title bar icon.
     main_window.resizable(False, False)         # Set the resizable property for height and width to False.
     #main_window_bg = "#"                       # Set the background colour of the main window.
     #main_window.configure(bg=main_window_bg)   # Configure the main window to use the background colour (value) of the "main_window_bg variable".
     CTk.set_appearance_mode("light")
 
+    # Initialise global lists and variables.
+    users = []                      # Create empty list for user details and their quiz results to be stored inside.
+    timer_showing = None            # Initialise a flag to track whether the timer is being displayed or not.
     # Create a "timer" BooleanVar to control the timer checkbutton state, with the default value being True, putting the checkbutton in an on state.
     timer = BooleanVar(value=True)  # Global reference to the timer checkbutton state.
 
     # Set up the class instances.
-    # The classes (Tools, Home, and Quiz) reference each other, so some instances are first given placeholder values (None) and are linked once the necessary objects are created.
+    # The classes (Tools, Scoreboard, Completion, Quiz, and Home) reference each other, so some instances are first given placeholder values (None) and are linked once the other necessary instances are created.
     # Ultimately, the class instances are linked together to allow access to each other's attributes and methods.
-    tools = Tools(None, None, None)                         # Create a "tools" instance of the "Tools" class so that the "Tools" class attributes and methods can be accessed within other classes once created. Temporarily pass "None" for the "Completion", Home", and "Quiz" class instances until they are created.
-    completion_page = Completion(tools, None, None)         # Create a "completion_page" instance of the "Completion" class and pass in the "tools" instance. Temporarily pass "None" for the "home" and "quiz" instance until it is created.
-    quiz_page = Quiz(tools, completion_page, None)     # Create a "quiz_page" instance of the "Quiz" class and pass in the "tools", "completion_page" and "home_page" instances. This allows access to "Tools", "Completion", and "Home" class attributes and methods from within the "Quiz" class.
-    home_page = Home(tools, completion_page, quiz_page)          # Create a "home_page" instance of the "Home" class and pass in the "tools" and "completion_page" instance. Temporarily pass "None" for the "quiz" instance until it is created.
+    tools = Tools(None, None, None, None)                                   # Create a "tools" instance of the "Tools" class so that the "Tools" class attributes and methods can be accessed within other classes once created. Temporarily pass "None" for all other class instances until they are created.
+    scoreboard_page = Scoreboard(tools, None, None, None)                   # Create a "scoreboard_page" instance of the "Scoreboard" class and pass in the "tools" instance. Temporarily pass "None" for the "completion_page", "quiz_page", and "home_page" instances until they are created.
+    completion_page = Completion(tools, scoreboard_page, None, None)        # Create a "completion_page" instance of the "Completion" class and pass in the "tools" and "scoreboard_page" instances. Temporarily pass "None" for the "quiz_page" and "home_page" instances until they are created.
+    quiz_page = Quiz(tools, scoreboard_page, completion_page, None)         # Create a "quiz_page" instance of the "Quiz" class and pass in the "tools", "scoreboard_page", and "completion_page" instances. Temporarily pass "None" for the "home_page" instance until it is created.
+    home_page = Home(tools, scoreboard_page, completion_page, quiz_page)    # Create a "home_page" instance of the "Home" class and pass in the "tools", "scoreboard_page", "completion_page", and "quiz_page" instances.
     
     # Link the remaining class instances to each other now that they are created.
-    tools.completion = completion_page  # Link the "completion_page" instance to the "tools" instance to allow access to "Completion" class attributes and methods from within the "Tools" class.
-    tools.quiz = quiz_page              # Link the "quiz_page" instance to the "tools" instance to allow access to "Quiz" class attributes and methods from within the "Tools" class.
-    tools.home = home_page              # Link the "home_page" instance to the "tools" instance to allow access to "Home" class attributes and methods from within the "Tools" class.
-    completion_page.quiz = quiz_page    # Link the "quiz_page" instance to the "completion_page" instance to allow access to "Quiz" class attributes and methods from within the "Completion" class.
-    completion_page.home = home_page    # Link the "home_page" instance to the "completion_page" instance to allow access to "Home" class attributes and methods from within the "Completion" class.
-    quiz_page.home = home_page          # Link the "home_page" instance to the "quiz_page" instance to allow access to "Home" class attributes and methods from within the "Quiz" class.
+    tools.scoreboard = scoreboard_page              # Link the "scoreboard_page" instance to the "tools" instance to allow access to "Scoreboard" class attributes and methods from within the "Tools" class.
+    tools.completion = completion_page              # Link the "completion_page" instance to the "tools" instance to allow access to "Completion" class attributes and methods from within the "Tools" class.
+    tools.quiz = quiz_page                          # Link the "quiz_page" instance to the "tools" instance to allow access to "Quiz" class attributes and methods from within the "Tools" class.
+    tools.home = home_page                          # Link the "home_page" instance to the "tools" instance to allow access to "Home" class attributes and methods from within the "Tools" class.
+    scoreboard_page.completion = completion_page    # Link the "completion_page" instance to the "scoreboard_page" instance to allow access to "Completion" class attributes and methods from within the "Scoreboard" class.
+    scoreboard_page.quiz = quiz_page                # Link the "quiz_page" instance to the "scoreboard_page" instance to allow access to "Quiz" class attributes and methods from within the "Scoreboard" class.
+    scoreboard_page.home = home_page                # Link the "home_page" instance to the "scoreboard_page" instance to allow access to "Home" class attributes and methods from within the "Scoreboard" class.
+    completion_page.quiz = quiz_page                # Link the "quiz_page" instance to the "completion_page" instance to allow access to "Quiz" class attributes and methods from within the "Completion" class.
+    completion_page.home = home_page                # Link the "home_page" instance to the "completion_page" instance to allow access to "Home" class attributes and methods from within the "Completion" class.
+    quiz_page.home = home_page                      # Link the "home_page" instance to the "quiz_page" instance to allow access to "Home" class attributes and methods from within the "Quiz" class.
 
     # Call the "setup_homepage" method from the "home_page" class instance to set up the home page UI elements.
     home_page.setup_homepage()
