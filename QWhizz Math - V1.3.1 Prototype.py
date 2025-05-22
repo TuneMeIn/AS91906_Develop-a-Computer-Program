@@ -93,7 +93,7 @@ class About:
         self.about_window.focus()
 
         # Add program details and a close button.
-        CTk.CTkLabel(self.about_window, text="QWhizz Math\nVersion 1.0\n© 2025 Jack Compton", justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20,10))
+        CTk.CTkLabel(self.about_window, text="QWhizz Math\nVersion 1.3.1\n© 2025 Jack Compton", justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20,10))
         CTk.CTkButton(self.about_window, text="Close", command=self.close).grid(row=1, column=0, sticky=EW, padx=10, pady=10)
 
         # Override the window close (X) button behavior so that the main window is enabled again when the about window is closed using this button.
