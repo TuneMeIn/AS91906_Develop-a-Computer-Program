@@ -1,7 +1,7 @@
 # AS91906 Develop a Computer Program
 This project is a GUI application for Flow Computing that helps students with their mathematics.
 
-# Versions
+# [Versions](https://github.com/TuneMeIn/AS91906_Develop-a-Computer-Program/commits/main/)
 * __Ver 1.0.0 - 05/05/2025__ - Initial preview release of program.  
 * __Ver 1.1.0 - 08/05/2025__ - UI Update: Overhauled the UI elements of the program.  
 * __Ver 1.2.0 - 15/05/2025__ - Functionality Update: Added a large amount of functionality to the program, including classes for Tools, About, Completion, Quiz, and Home.  
