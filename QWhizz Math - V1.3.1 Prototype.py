@@ -147,12 +147,12 @@ class Scoreboard:
 
         main_window.config(menu=scoreboard_menubar)
         
-        # Set up a frame to place the main scoreboard top elements inside.
+        # Set up a content frame to place the main scoreboard top elements inside.
         top_frame1 = CTk.CTkFrame(main_window, fg_color="transparent")
         top_frame1.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,5))
         top_frame1._set_appearance_mode("light")
 
-        # Set width for columns 0-2 (3 total) in top frame 1. Total minimum column width is 810px.
+        # Set width for columns 0-2 (3 total) in top frame 1. Total minimum column width is 710px.
         top_frame1.columnconfigure(0, weight=1, minsize=300)
         top_frame1.columnconfigure(1, weight=0, minsize=205)
         top_frame1.columnconfigure(2, weight=0, minsize=205)
@@ -163,7 +163,7 @@ class Scoreboard:
         CTk.CTkButton(top_frame1, text="View Answers", width=200).grid(column=1, row=1, sticky=EW, padx=(0,5), pady=(5,0))
         CTk.CTkButton(top_frame1, text="Retry Quiz", width=200).grid(column=2, row=1, sticky=EW, padx=(5,0), pady=(5,0))
 
-        # Set up a frame to place the main scoreboard top elements inside.
+        # Set up a content frame to place the scores inside.
         content_frame1 = CTk.CTkFrame(main_window)
         content_frame1.grid(column=0, row=1, sticky=EW, padx=20, pady=(5,20))
         content_frame1._set_appearance_mode("light")
@@ -253,12 +253,12 @@ class Completion:
 
         main_window.config(menu=completion_menubar)
 
-        # Set up a home frame to place the main home elements inside.
+        # Set up a content frame to place the main completion elements inside.
         completion_frame1 = CTk.CTkFrame(main_window)
         completion_frame1.grid(column=0, row=0, sticky=EW, padx=20, pady=(10,5))
         completion_frame1._set_appearance_mode("light")
 
-        # Set width for columns 0-2 (3 total) in content frame 1. Total minimum column width is 350px so that the frame will resize to fit the content.
+        # Set width for column 0 (1 total) in completion frame 1. Total minimum column width is 410px.
         completion_frame1.columnconfigure(0, weight=1, minsize=410)
 
         # Create the labels to be placed next to their relevant entry boxes.
@@ -276,6 +276,7 @@ class Completion:
         button_frame = CTk.CTkFrame(main_window, fg_color="transparent")
         button_frame.grid(column=0, row=1, sticky=EW, padx=20, pady=(5,10))
         button_frame._set_appearance_mode("light")
+        
         # Set width for columns 0-1 (2 total) in the answer frame. Total minimum column width is 410px.
         button_frame.columnconfigure(0, weight=1, minsize=205)
         button_frame.columnconfigure(1, weight=1, minsize=205)
@@ -464,6 +465,7 @@ class Quiz:
         quiz_dtls_frame1 = CTk.CTkFrame(main_window)
         quiz_dtls_frame1.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,5))
         quiz_dtls_frame1._set_appearance_mode("light")
+        
         # Set width for columns 0-2 (3 total) in quiz details frame 1. Total minimum column width is 410px.
         quiz_dtls_frame1.columnconfigure(0, weight=0, minsize=190)
         quiz_dtls_frame1.columnconfigure(1, weight=0, minsize=30)
@@ -484,6 +486,7 @@ class Quiz:
         # Create a frame for the question label or question image.
         self.question_frame = CTk.CTkFrame(main_window)
         self.question_frame.grid(column=0, row=2, sticky=EW, padx=20, pady=5)
+        
         # Set width for column 0 (1 total) and row 0 (1 total) in quiz details frame 1.
         self.question_frame.columnconfigure(0, weight=0, minsize=410)
         self.question_frame.rowconfigure(0, weight=0, minsize=205)
@@ -495,6 +498,7 @@ class Quiz:
         # Create a frame for the answer buttons
         self.answer_frame = CTk.CTkFrame(main_window, fg_color="transparent")
         self.answer_frame.grid(column=0, row=3, sticky=EW, padx=20, pady=(5,20))
+        
         # Set width for columns 0-1 (2 total) in the answer frame. Total minimum column width is 410px.
         self.answer_frame.columnconfigure(0, weight=0, minsize=205)
         self.answer_frame.columnconfigure(1, weight=0, minsize=205)
@@ -568,7 +572,7 @@ class Home:
 
         main_window.config(menu=home_menubar)
 
-        # Set up a home frame to place the main home elements inside.
+        # Set up a content frame to place the main home elements inside.
         home_frame1 = CTk.CTkFrame(main_window)
         home_frame1.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,5))
         home_frame1._set_appearance_mode("light")
