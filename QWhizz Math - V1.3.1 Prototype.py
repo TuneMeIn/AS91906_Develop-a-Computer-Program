@@ -1,17 +1,16 @@
 # Date Created: 05/05/2025
 # Author: Jack Compton
 # Purpose: GUI application for Flow Computing that helps students with their mathematics.
+# BEFORE USE: For windows, open Command Prompt and type "pip install customtkinter" then press enter. If or once installed, this program can be used.
 
 import customtkinter as CTk
 from tkinter import *
-from tkinter import ttk
-import time
-from PIL import Image, ImageTk 
-
+from tkinter import messagebox
+import time, random
 
 class Tools:
-    # Constructor for the "Quiz" class, which takes an instance of the class names as a parameter and stores it in their unique attributes.
-    # This allows attributes and methods defined in the "Completion" class, for example, to be accessed from within the "Tools" class.
+    # Constructor for the "Tools" class, which takes an instance of the class names as a parameter and stores it in their unique attributes.
+    # This allows attributes and methods defined in the "Home" class, for example, to be accessed from within the "Tools" class.
     def __init__(self, scoreboard_instance, completion_instance, quiz_instance, homepage_instance):
         self.scoreboard = scoreboard_instance   # Store a reference to the "Scoreboard" class instance.
         self.completion = completion_instance   # Store a reference to the "Completion" class instance.
@@ -111,6 +110,8 @@ class About:
 
 
 class Scoreboard:
+    # Constructor for the "Scoreboard" class, which takes an instance of the class names as a parameter and stores it in their unique attributes.
+    # This allows attributes and methods defined in the "Home" class, for example, to be accessed from within the "Scoreboard" class.
     def __init__(self, tools_instance, completion_instance, quiz_instance, homepage_instance):
         self.tools = tools_instance             # Store a reference to the "Tools" class instance.
         self.completion = completion_instance   # Store a reference to the "Completion" class instance.
@@ -183,24 +184,26 @@ class Scoreboard:
         # Create the column headings
         CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Ref #").grid(column=0, row=0, sticky=EW, padx=5, pady=5)
         CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Username").grid(column=1, row=0, sticky=W, padx=5, pady=5)
-        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Difficulty").grid(column=2, row=0, sticky=W, padx=5, pady=5)
-        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Questions").grid(column=3, row=0, sticky=W, padx=5, pady=5)
-        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Time").grid(column=4, row=0, sticky=W, padx=5, pady=5)
-        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Score").grid(column=5, row=0, sticky=W, padx=5, pady=5)
+        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Difficulty").grid(column=2, row=0, sticky=EW, padx=5, pady=5)
+        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Questions").grid(column=3, row=0, sticky=EW, padx=5, pady=5)
+        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Time").grid(column=4, row=0, sticky=EW, padx=5, pady=5)
+        CTk.CTkLabel(content_frame1, font=("Segoe UI", 14, "bold"), text="Score").grid(column=5, row=0, sticky=EW, padx=5, pady=5)
         
         # Add each item in the list into its own row
         for index, details in enumerate(users):
             list_row = index + 1
-            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=index + 1).grid(column=0, row=list_row, sticky=EW, padx=5, pady=5)
-            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[0]).grid(column=1, row=list_row, sticky=W, padx=5, pady=5)
-            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[1]).grid(column=2, row=list_row, sticky=W, padx=5, pady=5)
-            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[2]).grid(column=3, row=list_row, sticky=W, padx=5, pady=5)
-            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[3]).grid(column=4, row=list_row, sticky=W, padx=5, pady=5)
-            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[4]).grid(column=5, row=list_row, sticky=W, padx=5, pady=5)
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[0]).grid(column=0, row=list_row, sticky=EW, padx=5, pady=5)
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[1]).grid(column=1, row=list_row, sticky=W, padx=5, pady=5)
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[2]).grid(column=2, row=list_row, sticky=EW, padx=5, pady=5)
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[3]).grid(column=3, row=list_row, sticky=EW, padx=5, pady=5)
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[4]).grid(column=4, row=list_row, sticky=EW, padx=5, pady=5)
+            CTk.CTkLabel(content_frame1, font=("Segoe UI", 13), text=details[5]).grid(column=5, row=list_row, sticky=EW, padx=5, pady=5)
 
 
 
 class Completion:
+    # Constructor for the "Completion" class, which takes an instance of the class names as a parameter and stores it in their unique attributes.
+    # This allows attributes and methods defined in the "Home" class, for example, to be accessed from within the "Completion" class.
     def __init__(self, tools_instance, scoreboard_instance, quiz_instance, homepage_instance):
         self.tools = tools_instance             # Store a reference to the "Tools" class instance.
         self.scoreboard = scoreboard_instance   # Store a reference to the "Scoreboard" class instance.
@@ -211,12 +214,24 @@ class Completion:
     def setup_completion(self):
         global username, difficulty, difficulty_num, questions, users
         
+        existing_ref_numbers = [user[0] for user in users]  # Create a list of existing reference numbers from the "users" list.
+        
+        # Check if the maximum number of unique reference numbers has been reached.
+        if len(existing_ref_numbers) >= 9000:  # Check if 9000 possible unique 4-digit ref numbers from 1000 to 9999 have been generated.
+            messagebox.showwarning("Maximum Entries Reached", "No more unique reference numbers can be generated. Please delete old user scores to add new ones.")
+            return  # Exit the procedure if no more reference numbers can be generated.
+
+        while True:
+            ref_number = random.randint(1000, 9999)  # Generate a random number from 1000 to 9999 and put this value into the "ref_number" variable.
+            if ref_number not in existing_ref_numbers:  # Check that the generated reference number doesn't already exist.
+                break
+        
         self.final_score = f"{self.quiz.score}/{questions}"
         if timer.get() == True:
             self.time = self.quiz.total_time
         else:
             self.time = "Disabled"
-        users.append([username, difficulty, questions, self.time, self.final_score])  # Add the next user and their quiz details to the "users" list.
+        users.append([ref_number, username, difficulty, questions, self.time, self.final_score])  # Add the next user and their quiz details to the "users" list.
         
         # Set width for column 0 (1 total) in the main window. Setting the main window size before element creation ensures the window doesn't glitch between sizes.
         main_window.columnconfigure(0, weight=0, minsize=450)
@@ -256,7 +271,6 @@ class Completion:
             self.tools.timer_config("Completion", "Enable")
         if timer.get() == False:
             self.tools.timer_config("Completion", "Disable")
-
 
         # Create a frame to place the buttons inside.
         button_frame = CTk.CTkFrame(main_window, fg_color="transparent")
@@ -327,7 +341,7 @@ class Quiz:
 
         if command == "Home" or command == "Scoreboard":
             self.user_answers.clear()
-            if origin != None: self.tools.reset_details(origin)  # If the origin is not None, reset the details (origin is only specified for the completion page).
+            if origin != None: self.tools.reset_details(origin)  # If the origin is not None (meaning an origin has been specified), reset the details. Origin is only specified for the completion page.
             self.question_no = 1
             self.score = 0
             if command == "Home":
@@ -473,10 +487,8 @@ class Quiz:
         # Set width for column 0 (1 total) and row 0 (1 total) in quiz details frame 1.
         self.question_frame.columnconfigure(0, weight=0, minsize=410)
         self.question_frame.rowconfigure(0, weight=0, minsize=205)
-
-        # Create a canvas for the question image.
-        #question_canvas = CTk.CTkCanvas(question_frame, bd=0, highlightthickness=0)
-        #question_canvas.grid(row=0, column=0, pady=10)
+        
+        # Create a label for the question text.
         question_lbl = CTk.CTkLabel(self.question_frame, text="It's looking a little empty...", font=("Segoe UI", 20, "bold"))
         question_lbl.grid(column=0, row=0)
 
@@ -492,19 +504,6 @@ class Quiz:
         answer_2 = "No"
         answer_3 = "No"
         answer_4 = "No"
-        
-        # Potential code for generating random answers.
-        #for i in range(questions):
-            #self.correct_answers = random.randint(1,10)
-            #correct_btn = random.randint(1,4)
-            #if correct_btn == 1:
-                #self.correct_answers[i] = "A"
-            #elif correct_btn == 2:
-                #self.correct_answers[i] = "B"
-            #elif correct_btn == 3:
-                #self.correct_answers[i] = "C"
-            #elif correct_btn == 4:
-                #self.correct_answers[i] = "D"
             
         self.correct_answers = ["A"] * questions
 
@@ -623,23 +622,20 @@ class Home:
         CTk.CTkButton(button_frame, text="Start", command=lambda: self.tools.clear_widget(self.quiz.setup_quiz, True, None, None, self.tools.save_details("Home")), width=200).grid(column=1, row=1, sticky=EW, padx=(5,0))
 
 
+
 # Main function for starting the program.
 def main(): 
     global main_window, users, timer_showing, timer, username, difficulty_num, questions
     
     main_window = Tk()                          # Initialise the main window. For scaling reasons, use a Tk window with CTk elements.
     main_window.title("QWhizz Math")            # Set the title of the window.
-    #main_window.iconphoto(False, PhotoImage(file="Images/Pgm_icon.png"))  # Set the title bar icon.
     main_window.resizable(False, False)         # Set the resizable property for height and width to False.
-    #main_window_bg = "#"                       # Set the background colour of the main window.
-    #main_window.configure(bg=main_window_bg)   # Configure the main window to use the background colour (value) of the "main_window_bg variable".
     CTk.set_appearance_mode("light")
 
     # Initialise global lists and variables.
     users = []                      # Create empty list for user details and their quiz results to be stored inside.
     timer_showing = None            # Initialise a flag to track whether the timer is being displayed or not.
-    # Create a "timer" BooleanVar to control the timer checkbutton state, with the default value being True, putting the checkbutton in an on state.
-    timer = BooleanVar(value=True)  # Global reference to the timer checkbutton state.
+    timer = BooleanVar(value=True)          # Create a "timer" BooleanVar global reference to control the timer checkbutton state, with the default value being True, putting the checkbutton in an on state.
     username = None                         # Initialise the username attribute as None.
     difficulty_num = None                   # Initialise the difficulty_num attribute as None.
     questions = None                        # Initialise the questions attribute as None.
