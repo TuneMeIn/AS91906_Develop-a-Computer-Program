@@ -820,7 +820,6 @@ class Quiz:
             
             # Calculate how long the quiz has been running in total and subtract all time spent paused.
             self.calculated_elapsed_time = int(current_time - self.quiz_start_time - self.total_paused_time)
-            #self.elapsed_time = self.calculated_elapsed_time
 
             # Format the total seconds into HH:MM:SS format
             # Divide total seconds by 3600 (as there are 3600 seconds in an hour) to get the number of full hours.
