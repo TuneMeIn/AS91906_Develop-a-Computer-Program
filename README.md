@@ -12,3 +12,4 @@ This project is a GUI application for Flow Computing to help students with their
 ### Version 2
 * __Ver 2.0.0 - 17/06/2025__ - Initial release of version 2 for the QWhizz Math program. This release contains a large improvement to the functionality and UI design, including JSON storage for saving scores.  
 * __Ver 2.1.0 - 18/06/2025__ - Functionality Update: In this version, another JSON storage file has been introduced in order to save program settings, which currently just contains the preference for the timer being enabled or disabled. The file management has also been made more robust and efficient to adapt to future updates.
+* __Ver 2.1.1 - 19/06/2025__ - Minor Functionality Update: Added a dynamic image for the pause button to improve user experience. Also tidied up the timer loop method and added a check to make sure the program only runs if the script is being run directly as the main program (not imported as a module).
