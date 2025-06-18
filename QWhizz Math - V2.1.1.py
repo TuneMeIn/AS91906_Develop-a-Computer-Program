@@ -461,7 +461,7 @@ class About:
         self.about_frame.columnconfigure(0, weight=0, minsize=300)
         
         # Add program details and a close button.
-        CTk.CTkLabel(self.about_frame, text="QWhizz Math\nVersion 2.1.0\nMade by Jack Compton", font=(default_font, 14, "bold"), text_color=font_colour, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
+        CTk.CTkLabel(self.about_frame, text="QWhizz Math\nVersion 2.1.1\nMade by Jack Compton", font=(default_font, 14, "bold"), text_color=font_colour, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
         CTk.CTkButton(self.about_window, text="Close", command=lambda: self.close(), font=(default_font, 14, "bold"), height=30, fg_color=button_fg, hover_color=button_hover).grid(row=1, column=0, sticky=EW, padx=10, pady=(5,10))
 
         # Override the window close (X) button behavior so that the main window is enabled again when the about window is closed using this button.
@@ -1182,8 +1182,9 @@ class Home:
 # Main function for starting the program.
 def main(): 
     global main_window, main_window_bg, frame_fg, button_fg, button_hover, menu_active_fg, menu_hover, font_colour, default_font  # Global variables for the window UI elements and design.
-    global users, quiz_paused, username, difficulty_num, questions, settings, default_settings, timer, data_loaded, full_directory, scoreboard_file_path, settings_file_path  # Global lists and variables for data, flags, and settings.
+    global users, quiz_paused, username, difficulty_num, questions, settings, default_settings, timer, data_loaded, full_directory, scoreboard_file_path, settings_file_path  # Global lists and variables for data, flags, and directories.
     
+    # Configure the main window and the variables used for UI element design.
     main_window = Tk()                          # Initialise the main window. For scaling reasons, use a Tk window with CTk elements.
     CTk.deactivate_automatic_dpi_awareness()    #  Deactivate the automatic DPI awareness of the CTk library, allowing it to work with Tkinter's DPI scaling. This resolves an issue with the custom combobox not scaling correctly.
     main_window.title("QWhizz Math")            # Set the title of the window.
@@ -1242,7 +1243,7 @@ def main():
     scoreboard_file_path = "AppData/scoreboard.json"  # Set the file path for the scoreboard JSON file.
     settings_file_path = "AppData/settings.json"      # Set the file path for the settings JSON file.
 
-    # Setup the rest of the program.
+    # Load the data from the JSON files and start the home page.
     tools.load_details("scoreboard", scoreboard_file_path, "users")     # Load the user scores from the scoreboard.json file.
     tools.load_details("settings", settings_file_path, "settings")      # Load the settings from the settings.json file.
     home_page.setup_homepage()                                          # Call the "setup_homepage" method from the "home_page" class instance to set up the home page UI elements.
@@ -1251,5 +1252,6 @@ def main():
     main_window.mainloop()
 
 
-# Run the main function.
-main()
+# Run the program file only if the script is being run directly as the main program (not imported as a module).
+if __name__ == "__main__":
+    main()  # Run the main function.
