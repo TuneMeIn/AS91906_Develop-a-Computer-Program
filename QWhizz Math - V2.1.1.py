@@ -641,7 +641,7 @@ class Completion:
 
         # Banner creation (left side)
         lbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(10, 0))
+        lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0))
         lbanner = Image.open("AppData/Images/lbanner.png")
         lbanner = ImageTk.PhotoImage(lbanner)
         lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
@@ -650,7 +650,7 @@ class Completion:
 
         # Banner creation (right side)
         rbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 10))
+        rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20))
         rbanner = Image.open("AppData/Images/rbanner.png")
         rbanner = ImageTk.PhotoImage(rbanner)
         rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
@@ -783,7 +783,7 @@ class Quiz:
         quiz_paused = True  # Set the flag to indicate that the quiz is paused.
         self.stop_timer(None, None)
         self.pause_start_time = time.time()  # Record the real-world time for when the pause started.
-        self.pause_btn.configure(command=self.unpause_quiz)
+        self.pause_btn.configure(command=self.unpause_quiz, image=self.play_img)
         
         # Create a pause overlay to visually block the quiz content until the quiz is unpaused.
         height = self.question_frame.winfo_height() + self.answer_frame.winfo_height() + 10  # Get the total height of both frames (question and answer frames), including the height of padding.
@@ -808,18 +808,11 @@ class Quiz:
         # Remove the pause overlay and restore the pause button to its original command, then start the timer again.
         self.pause_frame.destroy()
         quiz_paused = False  # Set the flag to indicate that the quiz is unpaused.
-        self.pause_btn.configure(command=self.pause_quiz)
-        self.start_timer()
+        self.pause_btn.configure(command=self.pause_quiz, image=self.pause_img)
+        self.start_timer()     
 
 
-    # Method for updating the elapsed time every second.
-    # This method is called by the "after" job scheduled in the "timer_loop" method.
-    def update_timer(self):
-        self.elapsed_time += 1
-        self.timer_loop()        
-
-
-    # Method for running the timer loop, which updates the timer every second.
+    # Method for running the timer loop, which updates the elapsed time and timer label every second.
     # This method is called by the "start_timer" method to initiate the timer loop.
     def timer_loop(self):
         if self.timer_active == True:
@@ -827,7 +820,7 @@ class Quiz:
             
             # Calculate how long the quiz has been running in total and subtract all time spent paused.
             self.calculated_elapsed_time = int(current_time - self.quiz_start_time - self.total_paused_time)
-            self.elapsed_time = self.calculated_elapsed_time
+            #self.elapsed_time = self.calculated_elapsed_time
 
             # Format the total seconds into HH:MM:SS format
             # Divide total seconds by 3600 (as there are 3600 seconds in an hour) to get the number of full hours.
@@ -849,7 +842,7 @@ class Quiz:
                 self.timer_lbl.configure(text=f"Time: {self.time_string}")
 
             # Schedule the next increment and update after 1 second (1000 milliseconds).
-            self.timer_job = self.timer_lbl.after(1000, self.update_timer)
+            self.timer_job = self.timer_lbl.after(1000, self.timer_loop)
 
 
     # Method for managing the user's answer to the current question.
@@ -907,7 +900,7 @@ class Quiz:
 
         # Banner creation (left side)
         lbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(10, 0))
+        lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0))
         lbanner = Image.open("AppData/Images/lbanner.png")
         lbanner = ImageTk.PhotoImage(lbanner)
         lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
@@ -916,7 +909,7 @@ class Quiz:
 
         # Banner creation (right side)
         rbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 10))
+        rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20))
         rbanner = Image.open("AppData/Images/rbanner.png")
         rbanner = ImageTk.PhotoImage(rbanner)
         rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
@@ -932,14 +925,22 @@ class Quiz:
         quiz_dtls_frame1.grid(column=0, row=0, sticky=EW, padx=20, pady=(0,5))
         
         # Set width for columns 0-2 (3 total) in quiz details frame 1. Total minimum column width is 410px.
-        quiz_dtls_frame1.columnconfigure(0, weight=0, minsize=190)
-        quiz_dtls_frame1.columnconfigure(1, weight=0, minsize=30)
-        quiz_dtls_frame1.columnconfigure(2, weight=0, minsize=190)
+        quiz_dtls_frame1.columnconfigure(0, weight=0, minsize=185)
+        quiz_dtls_frame1.columnconfigure(1, weight=0, minsize=40)
+        quiz_dtls_frame1.columnconfigure(2, weight=0, minsize=185)
+
+        main_window.button_image_1 = Image.open("AppData/Images/pause.png")  # Load the pause button image.
+        self.pause_image = main_window.button_image_1  # Assign the loaded image to a variable for use in the pause button.
+        self.pause_img = CTk.CTkImage(self.pause_image, size=(16, 17))  # Create a CTkImage object with the pause image to allow scaling to be used.
+
+        main_window.button_image_2 = Image.open("AppData/Images/play.png")  # Load the pause button image.
+        self.play_image = main_window.button_image_2  # Assign the loaded image to a variable for use in the pause button.
+        self.play_img = CTk.CTkImage(self.play_image, size=(16, 17))  # Create a CTkImage object with the pause image to allow scaling to be used.
 
         # Create the labels and pause button to be placed at the top of the quiz page.
         self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{questions}", font=(default_font, 14, "bold"), text_color=font_colour)
         self.question_no_lbl.grid(column=0, row=0, pady=10, sticky=NSEW)
-        self.pause_btn = CTk.CTkButton(quiz_dtls_frame1, text="P", font=(default_font, 14, "bold"), text_color=font_colour, command=self.pause_quiz, width=30, height=30, corner_radius=7.5,  fg_color=button_fg, hover_color=button_hover)
+        self.pause_btn = CTk.CTkButton(quiz_dtls_frame1, text=None, font=(default_font, 14, "bold"), text_color=font_colour, command=self.pause_quiz, width=40, height=30, corner_radius=7.5, image=self.pause_img, fg_color=button_fg, hover_color=button_hover)
         self.pause_btn.grid(column=1, row=0, pady=10)
         self.timer_lbl = CTk.CTkLabel(quiz_dtls_frame1, text="", font=(default_font, 14, "bold"), text_color=font_colour)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
         self.timer_lbl.grid(column=2, row=0, pady=10, sticky=NSEW)
@@ -1075,7 +1076,7 @@ class Home:
 
         # Banner creation (left side)
         lbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(10, 0), pady=27)
+        lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0), pady=27)
         lbanner = Image.open("AppData/Images/lbanner.png")
         lbanner = ImageTk.PhotoImage(lbanner)
         lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
@@ -1084,7 +1085,7 @@ class Home:
 
         # Banner creation (right side)
         rbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 10), pady=27)
+        rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20), pady=27)
         rbanner = Image.open("AppData/Images/rbanner.png")
         rbanner = ImageTk.PhotoImage(rbanner)
         rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
@@ -1242,9 +1243,9 @@ def main():
     settings_file_path = "AppData/settings.json"      # Set the file path for the settings JSON file.
 
     # Setup the rest of the program.
-    home_page.setup_homepage()                                      # Call the "setup_homepage" method from the "home_page" class instance to set up the home page UI elements.
-    tools.load_details("scoreboard", scoreboard_file_path, "users")    # Load the user scores from the scoreboard.json file.
-    tools.load_details("settings", settings_file_path, "settings")     # Load the settings from the settings.json file.
+    tools.load_details("scoreboard", scoreboard_file_path, "users")     # Load the user scores from the scoreboard.json file.
+    tools.load_details("settings", settings_file_path, "settings")      # Load the settings from the settings.json file.
+    home_page.setup_homepage()                                          # Call the "setup_homepage" method from the "home_page" class instance to set up the home page UI elements.
 
     # Start the CTkinter event loop so that the GUI window stays open.
     main_window.mainloop()
