@@ -120,78 +120,150 @@ class Tools:
                 widget.destroy()  # Destroy the widgets occupying the specified space.
 
 
-    # Function for loading the "users" list from the JSON file.
-    def load_details(self):
-            global data_loaded, users
-
-            self.shortened_scoreboard_directory = "AppData/scoreboard.json"                              # Get the intended path of the scoreboard file to be loaded, storing it in "shortened_scoreboard_directory".
-            self.full_scoreboard_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"     # Get the absolute intended path of the scoreboard file for debugging purposes when errors and warnings occur, storing it in "full_scoreboard_directory".
+    # Function for loading the "users" and "settings" lists from the JSON files.
+    def load_details(self, file_name, file_dir, file_data):
+            global data_loaded, users, settings, timer
             
             # Check if the JSON file exists. If not, create it.
-            if not os.path.exists(self.shortened_scoreboard_directory):   
-                response1 = messagebox.askyesno("File Not Found", "The scoreboard file cannot be found. Do you want to create a new one?")
+            if not os.path.exists(file_dir):   
+                response1 = messagebox.askyesno("File Not Found", f"The {file_name} file cannot be found. Do you want to create a new one?")
                 if response1 == True:  # If the user chooses to create a new file, proceed.
                     try:
                         # Create a new JSON file with an empty list.
-                        with open(self.shortened_scoreboard_directory, "w") as file:  # Create a new JSON file with an empty list if the file doesn't already exist.
-                            json.dump([], file)                     # Write an empty list to the new JSON file.
-                        users = []                                  # Make "users" as an empty list.
-                        data_loaded = True                          # Set the "data_loaded" variable to True, so that the program doesn't reload data before printing.
-                    except IOError as io_error:                     # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
-                        messagebox.showerror("File Error", f"An error occurred while creating the scoreboard file, program will run in temporary storage mode.\n\n{io_error}\n\n{self.full_scoreboard_directory}")  # Show an error message if the file cannot be created.
-                        users = []              # Make "users" as an empty list.
-                        data_loaded = False     # Set the "data_loaded" variable to False, so that the program will attempt to reload data before printing.
+                        with open(file_dir, "w") as file:   # Create a new JSON file with an empty list if the file doesn't already exist.
+                            if file_data == "users": json.dump([], file)                                # Write an empty list to the new JSON file.
+                            elif file_data == "settings": json.dump(default_settings, file, indent=4)   # Write an empty list to the new JSON file.
+                            file.close()  # Close the file after writing to it.
+                        if file_data == "users": users = []             # If the "file_data" variable is set to "users", make "users" as an empty list.
+                        elif file_data == "settings":
+                            settings = default_settings                 # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                            timer.set(settings.get("enable_timer"))     # Set the timer to the value stored in the "default_settings" dictionary.
+                        data_loaded = True                              # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
+                    except IOError as io_error:                         # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
+                        messagebox.showerror("File Error", f"An error occurred while creating the {file_name} file, program will run in temporary storage mode.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be created.
+                        if file_data == "users": users = []             # If the "file_data" variable is set to "users", make "users" as an empty list.
+                        elif file_data == "settings":
+                            settings = default_settings                 # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                            timer.set(settings.get("enable_timer"))     # Set the timer to the value stored in the "default_settings" dictionary.
+                        data_loaded = False                             # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                    except Exception as e:                              # Error control for any other errors.
+                        messagebox.showerror("Error", f"An error occurred while creating the {file_name} file, program will run in temporary storage mode.\n\n{e}\n\n{full_directory}")  # Show an error message if the file cannot be created due to an unexpected error.
+                        if file_data == "users": users = []             # If the "file_data" variable is set to "users", make "users" as an empty list.
+                        elif file_data == "settings":
+                            settings = default_settings                 # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                            timer.set(settings.get("enable_timer"))     # Set the timer to the value stored in the "default_settings" dictionary.
+                        data_loaded = False                             # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
                     return
                 else:                           # If the user chooses not to create a new file, run the program in temporary storage mode.
-                    messagebox.showwarning("Temporary Storage Mode", f"The program will run in temporary storage mode until the scoreboard file is created or replaced.\n\n{self.full_scoreboard_directory}")  # Show a warning message if the user does not want to create a new file.
-                    users = []                  # Make "users" as an empty list.
-                    data_loaded = False         # Set the "data_loaded" variable to False, so that the program will attempt to reload data before printing.
+                    messagebox.showwarning("Temporary Storage Mode", f"The program will run in temporary storage mode until the {file_name} file is created or replaced.\n\n{full_directory}")  # Show a warning message if the user does not want to create a new file.
+                    if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
+                    elif file_data == "settings":
+                        settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                        timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
+                    data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
                     return
             
             # If the JSON file exists, try to load the data from it, and if the file isn't in JSON format, it will raise a JSONDecodeError. If there are any other errors, such as the file being inaccessible, it will raise an IOError.
             try:
-                with open(self.shortened_scoreboard_directory, "r") as file:  # Open the JSON file in read mode ("r").
-                    users.clear                             # Clear the list to prevent duplicate entries.
-                    data = json.load(file)                  # Load the details from the JSON file into the "users" list.
-                    if not isinstance(data, list):          # Check if the loaded data is a list.
-                        raise json.JSONDecodeError("Expected a list", doc=str(data), pos=0)  # Raise an error if the loaded data is not a list, simulating a JSON decode error.
-                    users = data                            # Assign the loaded data to the "users" list.
-                    data_loaded = True                      # Set the "data_loaded" variable to True, so that the program doesn't reload data before printing.
-            except json.JSONDecodeError:                    # Error control for instances such as the JSON file having invalid data, having incorrect formatting, or being corrupted.
-                response2 = messagebox.askyesno("File Error", "Failed to decode JSON data. The scoreboard file may be corrupted or improperly formatted. Do you want to replace it?")  # Show an error message if the JSON file cannot be decoded, asking the user if they want to replace the file.
+                with open(file_dir, "r") as file:   # Open the JSON file in read mode ("r").
+                    if file_data == "users": users.clear            # Clear the list to prevent duplicate entries.
+                    elif file_data == "settings": settings.clear    # Clear the list to prevent duplicate entries.
+                    data = json.load(file)                          # Load the details from the JSON file into the "users" list.
+                    if file_data == "users": 
+                        if not isinstance(data, list):                  # Check if the loaded data is a list.
+                            raise json.JSONDecodeError("Expected a list", doc=str(data), pos=0)  # Raise an error if the loaded scoreboard data is not a list, simulating a JSON decode error.
+                        else:
+                            users = data           # Assign the loaded data to the "users" list.
+                    elif file_data == "settings":
+                        settings = data                             # Assign the loaded data to the "settings" list.
+                        timer.set(settings.get("enable_timer"))     # Set the timer to the value stored in the JSON file.
+                    data_loaded = True                              # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
+            except json.JSONDecodeError:                            # Error control for instances such as the JSON file having invalid data, having incorrect formatting, or being corrupted.
+                response2 = messagebox.askyesno("File Error", f"Failed to decode JSON data. The {file_name} file may be corrupted or improperly formatted. Do you want to replace it?")  # Show an error message if the JSON file cannot be decoded, asking the user if they want to replace the file.
                 if response2 == True:
                     try:
-                        with open(self.shortened_scoreboard_directory, "w") as file:    # Open the shortened_scoreboard_directory file in write mode ("w").
-                            json.dump([], file)                                         # Overwrite the JSON file with an empty list.
-                        users = []                  # Make "users" as an empty list.
-                        data_loaded = True          # Set the "data_loaded" variable to True, so that the program doesn't reload data before printing.
-                        messagebox.showinfo("File Replaced", f"The JSON scoreboard file has been successfully replaced with an empty list.\n\n{self.full_scoreboard_directory}")
-                    except IOError as io_error:     # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
-                        messagebox.showerror("File Error", f"An error occurred while replacing the scoreboard file, program will run in temporary storage mode.\n\n{io_error}\n\n{self.full_scoreboard_directory}")  # Show an error message if the file cannot be replaced.
-                        users = []                  # Make "users" as an empty list.
-                        data_loaded = False         # Set the "data_loaded" variable to False, so that the program will attempt to reload data before printing.
-                    except Exception as e:          # Error control for any other exceptions that may occur.
-                        messagebox.showerror("Unexpected Error", f"An unexpected error occurred while replacing the scoreboard file, program will run in temporary storage mode.\n\n{e}\n\n{self.full_scoreboard_directory}")  # Show an error message if there is an unexpected error.
-                        users = []                  # Make "users" as an empty list.
-                        data_loaded = False         # Set the "data_loaded" variable to False, so that the program will attempt to reload data before printing.
+                        with open(file_dir, "w") as file:   # Open the shortened_directory file in write mode ("w").
+                            if file_data == "users": json.dump([], file)                                # Write an empty list to the new JSON file.
+                            elif file_data == "settings": json.dump(default_settings, file, indent=4)   # Write an empty list to the new JSON file.
+                            file.close()  # Close the file after writing to it.
+                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
+                        elif file_data == "settings":
+                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
+                        data_loaded = True                                  # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
+                        messagebox.showinfo("File Replaced", f"The JSON {file_name} file has been successfully replaced and restored to defaults.\n\n{full_directory}")
+                    except IOError as io_error:                             # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
+                        messagebox.showerror("File Error", f"An error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be replaced.
+                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
+                        elif file_data == "settings":
+                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
+                        data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                    except Exception as e:                                  # Error control for any other exceptions that may occur.
+                        messagebox.showerror("Unexpected Error", f"An unexpected error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
+                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
+                        elif file_data == "settings":
+                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
+                        data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
                     return
                 else:
-                    users = []              # Make "users" as an empty list.
-                    data_loaded = False     # Set the "data_loaded" variable to False, so that the program will attempt to reload data before printing.
+                    messagebox.showwarning("Temporary Storage Mode", f"The program will run in temporary storage mode until the {file_name} file is created or replaced.\n\n{full_directory}")  # Show a warning message if the user does not want to create a new file.
+                    if file_data == "users": users = []             # If the "file_data" variable is set to "users", make "users" as an empty list.
+                    elif file_data == "settings":
+                        settings = default_settings                 # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                        timer.set(settings.get("enable_timer"))     # Set the timer to the value stored in the "default_settings" dictionary.
+                    data_loaded = False                             # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
                     return
-            except IOError as io_error:     # Error control for instances such as the file being inaccessible or lacking the permission to read it.
-                messagebox.showwarning("File Error", f"An error occurred while reading the scoreboard file, program will run in temporary storage mode.\n\n{io_error}\n\n{self.full_scoreboard_directory}")  # Show an error message if the file cannot be read.
-                users = []                  # Make "users" as an empty list.
-                data_loaded = False         # Set the "data_loaded" variable to False, so that the program will attempt to reload data before printing.
-            except Exception as e:          # Error control for any other exceptions that may occur.
-                messagebox.showerror("Unexpected Error", f"An unexpected error occurred while reading the scoreboard file, program will run in temporary storage mode.\n\n{e}\n\n{self.full_scoreboard_directory}")  # Show an error message if there is an unexpected error.
-                users = []                  # Make "users" as an empty list.
-                data_loaded = False         # Set the "data_loaded" variable to False, so that the program will attempt to reload data before printing.
+            except IOError as io_error:                             # Error control for instances such as the file being inaccessible or lacking the permission to read it.
+                messagebox.showwarning("File Error", f"An error occurred while reading the {file_name} file, program will run in temporary storage mode.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be read.
+                if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
+                elif file_data == "settings":
+                    settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                    timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
+                data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+            except Exception as e:                                  # Error control for any other exceptions that may occur.
+                response3 = messagebox.askyesno("Unexpected Error", f"An unexpected error occurred while reading the {file_name} file. Do you want to replace it?")  # Show an error message if there is an unexpected error.
+                if response3 == True:
+                    try:
+                        with open(file_dir, "w") as file:   # Open the shortened_directory file in write mode ("w").
+                            if file_data == "users": json.dump([], file)                                # Write an empty list to the new JSON file.
+                            elif file_data == "settings": json.dump(default_settings, file, indent=4)   # Write an empty list to the new JSON file.
+                            file.close()  # Close the file after writing to it.
+                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
+                        elif file_data == "settings":
+                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
+                        data_loaded = True                                  # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
+                        messagebox.showinfo("File Replaced", f"The JSON {file_name} file has been successfully replaced and restored to defaults.\n\n{full_directory}")
+                    except IOError as io_error:                             # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
+                        messagebox.showerror("File Error", f"An error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be replaced.
+                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
+                        elif file_data == "settings":
+                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
+                        data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                    except Exception as e:                                  # Error control for any other exceptions that may occur.
+                        messagebox.showerror("Unexpected Error", f"An unexpected error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
+                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
+                        elif file_data == "settings":
+                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
+                        data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                    return
+                else:
+                    messagebox.showwarning("Temporary Storage Mode", f"The program will run in temporary storage mode until the {file_name} file is created or replaced.\n\n{full_directory}")  # Show a warning message if the user does not want to create a new file.
+                    if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
+                    elif file_data == "settings":
+                        settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                        timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
+                    data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
 
 
     # Method for saving details specific to the specified window.
-    def save_details(self, procedure, origin, scenario):
-        global ref_number, username, difficulty_num, questions
+    def save_details(self, procedure, origin, scenario, file_dir):
+        global ref_number, username, difficulty_num, questions, data_loaded
+        
         if origin == "Home":
             if scenario == "Temporary" or scenario == "Permanent":
                 username = self.home.username_entry.get()           # Get the username entry widget value.
@@ -210,7 +282,7 @@ class Tools:
                     return
                 else:
                     while True:
-                        ref_number = random.randint(1000, 9999)  # Generate a random number from 1000 to 9999 and put this value into the "ref_number" variable.
+                        ref_number = random.randint(1000, 9999)     # Generate a random number from 1000 to 9999 and put this value into the "ref_number" variable.
                         if ref_number not in existing_ref_numbers:  # Check that the generated reference number doesn't already exist.
                             break
             
@@ -222,23 +294,36 @@ class Tools:
                 return  # If the procedure is not "Quiz" or "Scoreboard", do nothing and return.
 
         elif origin == "Completion" or origin == "Scoreboard":
-                global data_loaded
                 try:
-                    with open(self.shortened_scoreboard_directory, "w") as file:   # Open the "scoreboard.json" file in write mode ("w"). If it doesn't exist, a new file will be created.
-                        json.dump(users, file, indent=4)    # Dump the entries from the "users" list into the JSON file.
-                    data_loaded = False                     # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when printing.
-                except IOError as io_error:                 # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
-                    messagebox.showerror("File Error", f"Failed to write to 'scoreboard.json'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{self.full_scoreboard_directory}")  # Show an error message if the file cannot be written to.
-                except Exception as e:                      # Error control for any other exceptions that may occur.
-                    messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'scoreboard.json'.\n\n{e}\n\n{self.full_scoreboard_directory}")  # Show an error message if there is an unexpected error.
-    
+                    with open(file_dir, "w") as file:   # Open the file in write mode ("w"). If it doesn't exist, a new file will be created.
+                        json.dump(users, file, indent=4)                # Dump the entries from the "users" list into the JSON file.
+                        file.close()  # Close the file after writing to it.
+                    data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                except IOError as io_error:                             # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
+                    messagebox.showerror("File Error", f"Failed to write to 'scoreboard.json'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be written to.
+                except Exception as e:                                  # Error control for any other exceptions that may occur.
+                    messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'scoreboard.json'.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
+        
+        elif origin == "Menubar":
+                global settings
+                try:
+                    settings = {"enable_timer": timer.get()}
+                    with open(file_dir, "w") as file:   # Open the file in write mode ("w"). If it doesn't exist, a new file will be created.
+                        json.dump(settings, file, indent=4)             # Dump the entries from the "users" list into the JSON file.
+                        file.close()  # Close the file after writing to it.
+                    data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                except IOError as io_error:                             # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
+                    messagebox.showerror("File Error", f"Failed to write to 'settings.json'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be written to.
+                except Exception as e:                                  # Error control for any other exceptions that may occur.
+                    messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'settings.json'.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
+
 
     # Method for printing details into a PDF.
     def print_details(self, selection):
         self.full_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"  # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "full_pdf_directory".
         
         if not data_loaded:  # Check if the data has been loaded from the JSON file.
-            self.load_details()
+            self.load_details("scoreboard", scoreboard_file_path, "users")
         
         if users == []:  # Check if the "users" list is empty.
             response = messagebox.askyesno("No Scores Recorded", "There are no recorded scores to print.\nWould you still like to print out a blank scoreboard table?")
@@ -282,7 +367,7 @@ class Tools:
                         users = []
                         self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
                         messagebox.showinfo("Scores Deleted", "All recorded scores have been deleted.")
-                        self.save_details(None, "Scoreboard", None)
+                        self.save_details(None, "Scoreboard", None, scoreboard_file_path)
                     else:
                         return
                 else:
@@ -317,19 +402,22 @@ class Tools:
             main_window.unbind(key)
 
 
-    # Method for configuring the timer state (enabled/disabled).
-    # Unique identifiers are passed in "origin" to differentiate between the "Quiz" and "Completion" classes to manage their relevant timer labels.
-    def timer_config(self, origin, command):
+    # Method for configuring the timer label state (enabled/disabled).
+    ## Unique identifiers are passed in "origin" to differentiate between the "Quiz" and "Completion" classes to manage their relevant timer labels.
+    def timer_config(self, origin, command, procedure):
         if origin == "Quiz":
             if command == "Enable":
                 self.quiz.timer_lbl.configure(text=f"Time: {self.quiz.time_string}")
             if command == "Disable":
                 self.quiz.timer_lbl.configure(text="Timer Disabled")
+        
         if origin == "Completion":
             if command == "Enable":
                 self.completion.total_time_lbl.configure(text=f"Total Time: {self.quiz.total_time}")
             if command == "Disable":
                 self.completion.total_time_lbl.configure(text="Timer Disabled")
+        
+        if procedure != None: procedure()
 
 
 
@@ -373,7 +461,7 @@ class About:
         self.about_frame.columnconfigure(0, weight=0, minsize=300)
         
         # Add program details and a close button.
-        CTk.CTkLabel(self.about_frame, text="QWhizz Math\nVersion 1.3.1\nMade by Jack Compton", font=(default_font, 14, "bold"), text_color=font_colour, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
+        CTk.CTkLabel(self.about_frame, text="QWhizz Math\nVersion 2.1.0\nMade by Jack Compton", font=(default_font, 14, "bold"), text_color=font_colour, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
         CTk.CTkButton(self.about_window, text="Close", command=lambda: self.close(), font=(default_font, 14, "bold"), height=30, fg_color=button_fg, hover_color=button_hover).grid(row=1, column=0, sticky=EW, padx=10, pady=(5,10))
 
         # Override the window close (X) button behavior so that the main window is enabled again when the about window is closed using this button.
@@ -424,8 +512,8 @@ class Scoreboard:
         scoreboard_menubar.add_cascade(label="Settings", menu=settings_menu)
         timer_settings = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
-        timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True)
-        timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False)
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
 
         help_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         scoreboard_menubar.add_cascade(label="Help", menu=help_menu)
@@ -525,7 +613,7 @@ class Completion:
         else:
             self.time = "Disabled"
         users.append([ref_number, username, difficulty, questions, self.time, self.quiz.final_score])  # Add the next user and their quiz details to the "users" list.
-        self.tools.save_details(None, "Completion", None)  # Save the details to the JSON file.
+        self.tools.save_details(None, "Completion", None, scoreboard_file_path)  # Save the details to the JSON file.
         self.setup_completion()
 
 
@@ -541,8 +629,8 @@ class Completion:
         completion_menubar.add_cascade(label="Settings", menu=settings_menu)
         timer_settings = Menu(completion_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
-        timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.timer_config("Completion", "Enable"), value=True)
-        timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.timer_config("Completion", "Disable"), value=False)
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path), value=True)
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path), value=False)
 
         help_menu = Menu(completion_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         completion_menubar.add_cascade(label="Help", menu=help_menu)
@@ -596,9 +684,9 @@ class Completion:
         self.total_time_lbl = CTk.CTkLabel(completion_frame1, text="", font=(default_font, 15), text_color=font_colour)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
         self.total_time_lbl.grid(column=0, row=3, sticky=EW, padx=5, pady=(0,20))
         if timer.get() == True:
-            self.tools.timer_config("Completion", "Enable")
+            self.tools.timer_config("Completion", "Enable", None)
         if timer.get() == False:
-            self.tools.timer_config("Completion", "Disable")
+            self.tools.timer_config("Completion", "Disable", None)
 
         # Create a frame to place the buttons inside.
         button_frame = CTk.CTkFrame(self.main_content_frame, fg_color="transparent")
@@ -802,8 +890,8 @@ class Quiz:
         quiz_menubar.add_cascade(label="Settings", menu=settings_menu)
         timer_settings = Menu(quiz_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
-        timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.timer_config("Quiz", "Enable"), value=True)        # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
-        timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.timer_config("Quiz", "Disable"), value=False)     # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.timer_config("Quiz", "Enable", self.tools.save_details(None, "Menubar", None, settings_file_path)), value=True)        # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.timer_config("Quiz", "Disable", self.tools.save_details(None, "Menubar", None, settings_file_path)), value=False)     # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
 
         help_menu = Menu(quiz_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         quiz_menubar.add_cascade(label="Help", menu=help_menu)
@@ -856,9 +944,9 @@ class Quiz:
         self.timer_lbl = CTk.CTkLabel(quiz_dtls_frame1, text="", font=(default_font, 14, "bold"), text_color=font_colour)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
         self.timer_lbl.grid(column=2, row=0, pady=10, sticky=NSEW)
         if timer.get() == True:
-            self.tools.timer_config("Quiz", "Enable")
+            self.tools.timer_config("Quiz", "Enable", None)
         elif timer.get() == False:
-            self.tools.timer_config("Quiz", "Disable")
+            self.tools.timer_config("Quiz", "Disable", None)
 
         # Create a frame for the question label or question image.
         self.question_frame = CTk.CTkFrame(self.main_content_frame, fg_color=frame_fg, corner_radius=10)
@@ -975,8 +1063,8 @@ class Home:
         home_menubar.add_cascade(label="Settings", menu=settings_menu)
         timer_settings = Menu(home_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
-        timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True)
-        timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False)
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
 
         help_menu = Menu(home_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         home_menubar.add_cascade(label="Help", menu=help_menu)
@@ -1083,16 +1171,17 @@ class Home:
         button_frame.columnconfigure(1, weight=0, minsize=205)
 
         # Create the buttons.
-        CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.tools.save_details("Scoreboard", "Home", "Temporary"),
+        CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.tools.save_details("Scoreboard", "Home", "Temporary", None),
                       width=200, height=35, corner_radius=10, fg_color=button_fg, hover_color=button_hover, font=(default_font, 14, "bold"), text_color=font_colour).grid(column=0, row=1, sticky=EW, padx=(0,5))
-        CTk.CTkButton(button_frame, text="Start", command=lambda:self.tools.save_details("Quiz", "Home", "Permanent"),
+        CTk.CTkButton(button_frame, text="Start", command=lambda:self.tools.save_details("Quiz", "Home", "Permanent", None),
                       width=200, height=35, corner_radius=10, fg_color=button_fg, hover_color=button_hover, font=(default_font, 14, "bold"), text_color=font_colour).grid(column=1, row=1, sticky=EW, padx=(5,0))
 
 
 
 # Main function for starting the program.
 def main(): 
-    global main_window,main_window_bg, frame_fg, button_fg, button_hover, menu_active_fg, menu_hover, font_colour, default_font, users, data_loaded, quiz_paused, timer_showing, timer, username, difficulty_num, questions
+    global main_window, main_window_bg, frame_fg, button_fg, button_hover, menu_active_fg, menu_hover, font_colour, default_font  # Global variables for the window UI elements and design.
+    global users, quiz_paused, username, difficulty_num, questions, settings, default_settings, timer, data_loaded, full_directory, scoreboard_file_path, settings_file_path  # Global lists and variables for data, flags, and settings.
     
     main_window = Tk()                          # Initialise the main window. For scaling reasons, use a Tk window with CTk elements.
     CTk.deactivate_automatic_dpi_awareness()    #  Deactivate the automatic DPI awareness of the CTk library, allowing it to work with Tkinter's DPI scaling. This resolves an issue with the custom combobox not scaling correctly.
@@ -1111,14 +1200,15 @@ def main():
 
     # Initialise global lists and variables.
     users = []                              # Create empty list for user details and their quiz results to be stored inside.
-    data_loaded = False                     # Initialise a flag to track whether the JSON file data has been loaded, setting it to False so that the program will attempt to reload data from the file before displaying the scoreboard.
     quiz_paused = False                     # Initialise a flag to track whether the quiz is paused or not.
-    timer_showing = None                    # Initialise a flag to track whether the timer is being displayed or not.
-    timer = BooleanVar(value=True)          # Create a "timer" BooleanVar global reference to control the timer checkbutton state, with the default value being True, putting the checkbutton in an on state.
     username = None                         # Initialise the username attribute as None.
     difficulty_num = None                   # Initialise the difficulty_num attribute as None.
     questions = None                        # Initialise the questions attribute as None.
-
+    settings = []                           # Create empty list for settings to be stored inside.
+    default_settings = {"enable_timer": True}
+    timer = BooleanVar(value=default_settings["enable_timer"])  # Create a "timer" BooleanVar global reference to control the timer checkbutton state, with the default value being dependent on the "enable_timer" key in the "default_settings" dictionary, setting the checkbutton in an on state.
+    data_loaded = False                     # Initialise a flag to track whether the JSON file data has been loaded, setting it to False so that the program will attempt to reload data from the file before displaying the scoreboard.
+    
     # Set up the class instances.
     # The classes (Tools, Scoreboard, Completion, Quiz, and Home) reference each other, so some instances are first given placeholder values (None) and are linked once the other necessary instances are created.
     # Ultimately, the class instances are linked together to allow access to each other's attributes and methods.
@@ -1146,9 +1236,15 @@ def main():
     completion_page.home = home_page                # Link the "home_page" instance to the "completion_page" instance to allow access to "Home" class attributes and methods from within the "Completion" class.
     quiz_page.home = home_page                      # Link the "home_page" instance to the "quiz_page" instance to allow access to "Home" class attributes and methods from within the "Quiz" class.
 
-    # Call the "setup_homepage" method from the "home_page" class instance to set up the home page UI elements.
-    home_page.setup_homepage()
-    tools.load_details()
+    # Setup the directories for saving and loading data.
+    full_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"   # Get the absolute intended path of the JSON files for debugging purposes when errors and warnings occur, storing it in "full_directory".
+    scoreboard_file_path = "AppData/scoreboard.json"  # Set the file path for the scoreboard JSON file.
+    settings_file_path = "AppData/settings.json"      # Set the file path for the settings JSON file.
+
+    # Setup the rest of the program.
+    home_page.setup_homepage()                                      # Call the "setup_homepage" method from the "home_page" class instance to set up the home page UI elements.
+    tools.load_details("scoreboard", scoreboard_file_path, "users")    # Load the user scores from the scoreboard.json file.
+    tools.load_details("settings", settings_file_path, "settings")     # Load the settings from the settings.json file.
 
     # Start the CTkinter event loop so that the GUI window stays open.
     main_window.mainloop()
