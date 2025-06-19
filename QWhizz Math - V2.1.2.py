@@ -23,7 +23,7 @@ from fpdf import FPDF
 from fpdf.enums import TableCellFillMode
 from fpdf.fonts import FontFace
 from datetime import datetime
-import json, time, random, os
+import json, time, random, os, platform, subprocess
 
 class PDF(FPDF):
     def __init__(self):
@@ -320,14 +320,12 @@ class Tools:
 
     # Method for printing details into a PDF.
     def print_details(self, selection):
-        self.full_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"  # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "full_pdf_directory".
-        
         if not data_loaded:  # Check if the data has been loaded from the JSON file.
             self.load_details("scoreboard", scoreboard_file_path, "users")
         
         if users == []:  # Check if the "users" list is empty.
-            response = messagebox.askyesno("No Scores Recorded", "There are no recorded scores to print.\nWould you still like to print out a blank scoreboard table?")
-            if response == False:
+            response1 = messagebox.askyesno("No Scores Recorded", "There are no recorded scores to print.\nWould you still like to print out a blank scoreboard table?")
+            if response1 == False:
                 return
         
         # Initialise PDF
@@ -349,12 +347,26 @@ class Tools:
 
         try:
             # Save the PDF to file
-            pdf.output("QWhizz Math Scoreboard.pdf")
-            messagebox.showinfo("Print Successful", "The scoreboard has been successfully printed to 'QWhizz Math Scoreboard.pdf'.")
+            pdf.output(pdf_file_path)
+            messagebox.showinfo("Print Successful", f"The scoreboard has been successfully printed to 'QWhizz Math Scoreboard.pdf'.")
+            response2 = messagebox.askyesno("Send PDF to Printer", "Would you like to send the PDF to the printer now?")  # Ask the user if they want to print the PDF.
+            # If the user chooses to send the PDF to a printer, proceed with printing.
+            if response2 == True:
+                try:
+                    if operating_system == "Windows":  # Check if the operating system is Windows.
+                        os.startfile(pdf_file_path, "print")  # Send the PDF file to the default printer.
+                    elif operating_system == "Linux":  # Check if the operating system is Linux.
+                        subprocess.run(["lp", pdf_file_path], check=True)  # Use the "lp" command to send the PDF file to the default printer.
+                    elif operating_system == "Darwin":  # Check if the operating system is macOS.
+                        subprocess.run(["lp", pdf_file_path], check=True)  # Use the "lp" command to send the PDF file to the default printer.
+                    else:
+                        messagebox.showwarning("Unsupported OS", f"Your operating system ({operating_system}) is not supported for printing. Please print the PDF manually.\n\n{full_pdf_directory}")  # Show a warning message if the operating system is not supported for printing.
+                except Exception as e:
+                    messagebox.showerror("Printing Error", f"An error occurred while printing the PDF file.\n\n{e}\n\n{full_pdf_directory}")
         except IOError as io_error:     # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
-            messagebox.showerror("File Error", f"Failed to write to 'QWhizz Math Scoreboard.pdf'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{self.full_pdf_directory}")  # Show an error message if the file cannot be written to.
+            messagebox.showerror("File Error", f"Failed to write to 'QWhizz Math Scoreboard.pdf'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{full_pdf_directory}")  # Show an error message if the file cannot be written to.
         except Exception as e:          # Error control for any other exceptions that may occur.
-            messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'QWhizz Math Scoreboard.pdf'.\n\n{e}\n\n{self.full_pdf_directory}")  # Show an error message if there is an unexpected error.
+            messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'QWhizz Math Scoreboard.pdf'.\n\n{e}\n\n{full_pdf_directory}")  # Show an error message if there is an unexpected error.
 
 
     # Method for deleting details from the "users" list.
@@ -461,7 +473,7 @@ class About:
         self.about_frame.columnconfigure(0, weight=0, minsize=300)
         
         # Add program details and a close button.
-        CTk.CTkLabel(self.about_frame, text="QWhizz Math\nVersion 2.1.1\nMade by Jack Compton", font=(default_font, 14, "bold"), text_color=font_colour, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
+        CTk.CTkLabel(self.about_frame, text="QWhizz Math\nVersion 2.1.2\nMade by Jack Compton", font=(default_font, 14, "bold"), text_color=font_colour, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
         CTk.CTkButton(self.about_window, text="Close", command=lambda: self.close(), font=(default_font, 14, "bold"), height=30, fg_color=button_fg, hover_color=button_hover).grid(row=1, column=0, sticky=EW, padx=10, pady=(5,10))
 
         # Override the window close (X) button behavior so that the main window is enabled again when the about window is closed using this button.
@@ -1180,9 +1192,13 @@ class Home:
 
 # Main function for starting the program.
 def main(): 
-    global main_window, main_window_bg, frame_fg, button_fg, button_hover, menu_active_fg, menu_hover, font_colour, default_font  # Global variables for the window UI elements and design.
-    global users, quiz_paused, username, difficulty_num, questions, settings, default_settings, timer, data_loaded, full_directory, scoreboard_file_path, settings_file_path  # Global lists and variables for data, flags, and directories.
-    
+    global operating_system, main_window, main_window_bg, frame_fg, button_fg, button_hover, menu_active_fg, menu_hover, font_colour, default_font  # Global variables for the operating system and window UI elements/design.
+    global full_directory, full_pdf_directory, pdf_file_path, scoreboard_file_path, settings_file_path, users, quiz_paused, username, difficulty_num, questions, settings, default_settings, timer, data_loaded  # Global lists and variables for data, flags, and directories.
+
+    # Get the operating system name to manage functionalities in the program with limited support for multiple operating systems.
+    # When run on Linux, this will return "Linux". On macOS, this will return "Darwin". On Windows, this will return "Windows".
+    operating_system = platform.system()
+
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                          # Initialise the main window. For scaling reasons, use a Tk window with CTk elements.
     CTk.deactivate_automatic_dpi_awareness()    #  Deactivate the automatic DPI awareness of the CTk library, allowing it to work with Tkinter's DPI scaling. This resolves an issue with the custom combobox not scaling correctly.
@@ -1199,6 +1215,13 @@ def main():
     default_font = "Segoe UI"                   # Set the default font to be used for all CTk elements.
     main_window.configure(bg=main_window_bg)    # Configure the main window to use the background colour (value) of the "main_window_bg variable".
 
+    # Setup the directories for saving and loading data.
+    full_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"   # Get the absolute intended path of the JSON files for debugging purposes when errors and warnings occur, storing it in "full_directory".
+    full_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"  # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "full_pdf_directory".
+    pdf_file_path = "QWhizz Math Scoreboard.pdf"      # Set the file path for the scoreboard PDF file.
+    scoreboard_file_path = "AppData/scoreboard.json"  # Set the file path for the scoreboard JSON file.
+    settings_file_path = "AppData/settings.json"      # Set the file path for the settings JSON file.
+
     # Initialise global lists and variables.
     users = []                              # Create empty list for user details and their quiz results to be stored inside.
     quiz_paused = False                     # Initialise a flag to track whether the quiz is paused or not.
@@ -1209,7 +1232,7 @@ def main():
     default_settings = {"enable_timer": True}
     timer = BooleanVar(value=default_settings["enable_timer"])  # Create a "timer" BooleanVar global reference to control the timer checkbutton state, with the default value being dependent on the "enable_timer" key in the "default_settings" dictionary, setting the checkbutton in an on state.
     data_loaded = False                     # Initialise a flag to track whether the JSON file data has been loaded, setting it to False so that the program will attempt to reload data from the file before displaying the scoreboard.
-    
+
     # Set up the class instances.
     # The classes (Tools, Scoreboard, Completion, Quiz, and Home) reference each other, so some instances are first given placeholder values (None) and are linked once the other necessary instances are created.
     # Ultimately, the class instances are linked together to allow access to each other's attributes and methods.
@@ -1236,11 +1259,6 @@ def main():
     completion_page.quiz = quiz_page                # Link the "quiz_page" instance to the "completion_page" instance to allow access to "Quiz" class attributes and methods from within the "Completion" class.
     completion_page.home = home_page                # Link the "home_page" instance to the "completion_page" instance to allow access to "Home" class attributes and methods from within the "Completion" class.
     quiz_page.home = home_page                      # Link the "home_page" instance to the "quiz_page" instance to allow access to "Home" class attributes and methods from within the "Quiz" class.
-
-    # Setup the directories for saving and loading data.
-    full_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"   # Get the absolute intended path of the JSON files for debugging purposes when errors and warnings occur, storing it in "full_directory".
-    scoreboard_file_path = "AppData/scoreboard.json"  # Set the file path for the scoreboard JSON file.
-    settings_file_path = "AppData/settings.json"      # Set the file path for the settings JSON file.
 
     # Load the data from the JSON files and start the home page.
     tools.load_details("scoreboard", scoreboard_file_path, "users")     # Load the user scores from the scoreboard.json file.
