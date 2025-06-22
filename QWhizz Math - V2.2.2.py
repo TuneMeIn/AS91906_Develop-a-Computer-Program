@@ -15,6 +15,7 @@
 # Once these packages are installed, the program is ready to use.
 
 from tkinter import *
+from tkinter import ttk
 from tkinter import messagebox
 import customtkinter as CTk
 from AppData.CTkScrollableDropdown import *
@@ -29,16 +30,16 @@ class PDF(FPDF):
     def __init__(self):
         # Initialise the parent FPDF class and its attributes for page orientation and size.
         super().__init__(orientation="portrait", format="A4")  # "Super()" allows a subclass, in this case "PDF", to inherit methods and attributes from the parent class (superclass) "FPDF".
-        self.set_auto_page_break(auto=True, margin=20)  # Automatically add a new page if content overflows.
+        self.set_auto_page_break(auto=True, margin=20)         # Automatically add a new page if content overflows.
 
 
     def header(self):
         # Add logo on the top left
         self.image("AppData\Images\qw_logo.png", 15, 7, 25)
 
-        # Centered title image
+        # Centred title image
         img_width = 70
-        x_center = (self.w - img_width) / 2  # Calculate center x position.
+        x_center = (self.w - img_width) / 2  # Calculate centre x position.
         self.image("AppData\Images\scoreboard_logo.png", x=x_center, y=9, w=img_width)
 
         # Line break to move below header elements
@@ -55,7 +56,7 @@ class PDF(FPDF):
         self.cell(0, 10, f"Generated on: {current_datetime}", align="L")  # Print current date and time on the left.
         # Print current page number and total pages.
         self.set_x(-20)  # Align the right cell with the table's right-side X position, moved left by 20 mm.
-        self.cell(0, 10, f"Page {self.page_no()}/{{nb}}", align="R")  # Print page number on the right. "{nb}" is a placeholder that gets replaced with the total page count by "alias_nb_pages()".
+        self.cell(0, 10, f"Page {self.page_no()}/{{nb}}", align="R")      # Print page number on the right. "{nb}" is a placeholder that gets replaced with the total page count by "alias_nb_pages()".
 
 
     def scoreboard_table(self, data, headings):
@@ -72,13 +73,13 @@ class PDF(FPDF):
         # Create a styled table using fpdf2's context manager
         with self.table(
             borders_layout="NO_HORIZONTAL_LINES",
-            cell_fill_color=(224, 235, 255),  # Alternate cell colour for colour banding.
-            cell_fill_mode=TableCellFillMode.ROWS,  # Fill alternate cells for colour banding.
+            cell_fill_color=(224, 235, 255),           # Alternate cell colour for colour banding.
+            cell_fill_mode=TableCellFillMode.ROWS,     # Fill alternate cells for colour banding.
             col_widths=(75, 290, 125, 120, 100, 100),  # Set column widths
-            headings_style=heading_style,  # Apply heading style
-            line_height=6,  # Set line height
+            headings_style=heading_style,              # Apply heading style
+            line_height=6,                             # Set line height
             text_align=("CENTER", "LEFT", "CENTER", "CENTER", "CENTER", "CENTER"),  # Set text alignment for each column
-            width=180,  # Set table width
+            width=180,                                 # Set table width
         ) as table:
             # Create header cells
             heading_row = table.row()
@@ -120,6 +121,33 @@ class Tools:
                 widget.destroy()  # Destroy the widgets occupying the specified space.
 
 
+    # Method for handling mouse button 1 click events.
+    def on_mbtn1_click(self, origin, element):
+        if origin == "Scoreboard":
+            if element == "Scrollbar":
+                self.scoreboard.scrollbar.configure(button_color=button_clicked, button_hover_color=button_clicked)  # Change the scrollbar button colour to a darker blue when clicked and/or held.
+
+
+    # Method for handling mouse button 1 release events.
+    def on_mbtn1_release(self, origin, element):
+        if origin == "Scoreboard":
+            if element == "Scrollbar":
+                self.scoreboard.scrollbar.configure(button_color=button_fg, button_hover_color=button_hover)  # Change the scrollbar button colour back to a light blue when released.
+
+
+    # Method for handling errors and preventing repeated code.
+    def error_control(self, file_name, file_dir, file_data, control):
+        global users, settings, timer
+        
+        # Temporary storage mode
+        if control == "Temporary":
+            if file_data == "users": users = []          # If the "file_data" variable is set to "users", make "users" as an empty list.
+            elif file_data == "settings":
+                settings = default_settings              # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                timer.set(settings.get("enable_timer"))  # Set the timer to the value stored in the "default_settings" dictionary.
+        return  # Exit the function after handling the error control for temporary storage mode.
+
+    
     # Function for loading the "users" and "settings" lists from the JSON files.
     def load_details(self, file_name, file_dir, file_data):
             global data_loaded, users, settings, timer
@@ -131,133 +159,135 @@ class Tools:
                     try:
                         # Create a new JSON file with an empty list.
                         with open(file_dir, "w") as file:   # Create a new JSON file with an empty list if the file doesn't already exist.
-                            if file_data == "users": json.dump([], file)                                # Write an empty list to the new JSON file.
-                            elif file_data == "settings": json.dump(default_settings, file, indent=4)   # Write an empty list to the new JSON file.
-                            file.close()  # Close the file after writing to it.
-                        if file_data == "users": users = []             # If the "file_data" variable is set to "users", make "users" as an empty list.
-                        elif file_data == "settings":
-                            settings = default_settings                 # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                            timer.set(settings.get("enable_timer"))     # Set the timer to the value stored in the "default_settings" dictionary.
-                        data_loaded = True                              # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
-                    except IOError as io_error:                         # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
+                            if file_data == "users": json.dump([], file)                               # Write an empty list to the new JSON file.
+                            elif file_data == "settings": json.dump(default_settings, file, indent=4)  # Write an empty list to the new JSON file.
+                            file.close()    # Close the file after writing to it.
+                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                        data_loaded = True  # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
+
+                    # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
+                    except IOError as io_error:
                         messagebox.showerror("File Error", f"An error occurred while creating the {file_name} file, program will run in temporary storage mode.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be created.
-                        if file_data == "users": users = []             # If the "file_data" variable is set to "users", make "users" as an empty list.
-                        elif file_data == "settings":
-                            settings = default_settings                 # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                            timer.set(settings.get("enable_timer"))     # Set the timer to the value stored in the "default_settings" dictionary.
-                        data_loaded = False                             # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-                    except Exception as e:                              # Error control for any other errors.
+                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                        data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+
+                    # Error control for any other errors.
+                    except Exception as e:
                         messagebox.showerror("Error", f"An error occurred while creating the {file_name} file, program will run in temporary storage mode.\n\n{e}\n\n{full_directory}")  # Show an error message if the file cannot be created due to an unexpected error.
-                        if file_data == "users": users = []             # If the "file_data" variable is set to "users", make "users" as an empty list.
-                        elif file_data == "settings":
-                            settings = default_settings                 # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                            timer.set(settings.get("enable_timer"))     # Set the timer to the value stored in the "default_settings" dictionary.
-                        data_loaded = False                             # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                        data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
                     return
-                else:                           # If the user chooses not to create a new file, run the program in temporary storage mode.
+
+                # If the user chooses not to create a new file, run the program in temporary storage mode.
+                else:
                     messagebox.showwarning("Temporary Storage Mode", f"The program will run in temporary storage mode until the {file_name} file is created or replaced.\n\n{full_directory}")  # Show a warning message if the user does not want to create a new file.
-                    if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
-                    elif file_data == "settings":
-                        settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                        timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
-                    data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                    self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                    data_loaded = False      # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
                     return
-            
+
             # If the JSON file exists, try to load the data from it, and if the file isn't in JSON format, it will raise a JSONDecodeError. If there are any other errors, such as the file being inaccessible, it will raise an IOError.
             try:
-                with open(file_dir, "r") as file:   # Open the JSON file in read mode ("r").
-                    if file_data == "users": users.clear            # Clear the list to prevent duplicate entries.
-                    elif file_data == "settings": settings.clear    # Clear the list to prevent duplicate entries.
-                    data = json.load(file)                          # Load the details from the JSON file into the "users" list.
-                    if file_data == "users": 
-                        if not isinstance(data, list):                  # Check if the loaded data is a list.
-                            raise json.JSONDecodeError("Expected a list", doc=str(data), pos=0)  # Raise an error if the loaded scoreboard data is not a list, simulating a JSON decode error.
-                        else:
-                            users = data           # Assign the loaded data to the "users" list.
-                    elif file_data == "settings":
-                        settings = data                             # Assign the loaded data to the "settings" list.
-                        timer.set(settings.get("enable_timer"))     # Set the timer to the value stored in the JSON file.
-                    data_loaded = True                              # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
-            except json.JSONDecodeError:                            # Error control for instances such as the JSON file having invalid data, having incorrect formatting, or being corrupted.
-                response2 = messagebox.askyesno("File Error", f"Failed to decode JSON data. The {file_name} file may be corrupted or improperly formatted. Do you want to replace it?")  # Show an error message if the JSON file cannot be decoded, asking the user if they want to replace the file.
-                if response2 == True:
+                with open(file_dir, "r") as file:  # Open the JSON file in read mode ("r").
+                    data = json.load(file)         # Load the details from the JSON file into the "users" list.
+
+                if file_data == "users":
+                    if not isinstance(data, list):  # Check if the loaded data is a list.
+                        raise json.JSONDecodeError("Expected a list", doc=str(data), pos=0)  # Raise an error if the loaded scoreboard data is not a list, simulating a JSON decode error.
+                    users.clear()  # Clear the list to prevent duplicate entries.
+                    users = data   # Assign the loaded data to the "users" list.
+                    
+                    # Check all entries to make sure they each contain 6 elements.
+                    for i, details in enumerate(users):
+                        if len(details) < 6:
+                            response2 = messagebox.askyesno("Invalid Data", f"The {file_name} file contains invalid data. Entry #{i+1} is incomplete (expected 6 elements, got {len(details)}).\nWould you like to remove this entry?")
+                            if response2:
+                                # Remove invalid entries and update the scoreboard file.
+                                valid_users = [details for details in users if len(details) == 6]
+                                with open(file_dir, "w") as file:           # Open the JSON file in write mode ("w").
+                                    json.dump(valid_users, file, indent=4)  # Write the valid users to the JSON file.
+                                    file.close()                            # Close the file after writing to it.
+                                break
+                            else:
+                                messagebox.showwarning("Invalid Data", f"The program will run in temporary storage mode until the {file_name} file is fixed.\n\n{full_directory}")
+                                users = [details for details in users if len(details) == 6]  # Keep only the valid entries in memory.
+                                break
+
+                elif file_data == "settings":
+                    if not isinstance(data, dict): # Check if the loaded data is a dictionary.
+                        raise json.JSONDecodeError("Expected a dict", doc=str(data), pos=0)  # Raise an error if the loaded settings data is not a dictionary, simulating a JSON decode error.
+                    settings.clear()    # Clear the list to prevent duplicate entries.
+                    settings = data     # Modify the "settings" dictionary in place.
+                    timer.set(settings.get("enable_timer"))  # Set the timer to the value stored in the "default_settings" dictionary.
+
+                data_loaded = True      # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
+            
+            # Error control for instances such as the JSON file having invalid data, having incorrect formatting, or being corrupted.
+            except json.JSONDecodeError:
+                response3 = messagebox.askyesno("File Error", f"Failed to decode JSON data. The {file_name} file may be corrupted or improperly formatted. Do you want to replace it?")  # Show an error message if the JSON file cannot be decoded, asking the user if they want to replace the file.
+                if response3 == True:
                     try:
-                        with open(file_dir, "w") as file:   # Open the shortened_directory file in write mode ("w").
+                        with open(file_dir, "w") as file:  # Open the shortened_directory file in write mode ("w").
                             if file_data == "users": json.dump([], file)                                # Write an empty list to the new JSON file.
                             elif file_data == "settings": json.dump(default_settings, file, indent=4)   # Write an empty list to the new JSON file.
-                            file.close()  # Close the file after writing to it.
-                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
-                        elif file_data == "settings":
-                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
-                        data_loaded = True                                  # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
+                            file.close()    # Close the file after writing to it.
+                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                        data_loaded = True  # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
                         messagebox.showinfo("File Replaced", f"The JSON {file_name} file has been successfully replaced and restored to defaults.\n\n{full_directory}")
-                    except IOError as io_error:                             # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
+                    
+                    # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
+                    except IOError as io_error:
                         messagebox.showerror("File Error", f"An error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be replaced.
-                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
-                        elif file_data == "settings":
-                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
-                        data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-                    except Exception as e:                                  # Error control for any other exceptions that may occur.
+                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                        data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                    
+                    # Error control for any other exceptions that may occur.
+                    except Exception as e:                                  
                         messagebox.showerror("Unexpected Error", f"An unexpected error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
-                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
-                        elif file_data == "settings":
-                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
-                        data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                        data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
                     return
                 else:
                     messagebox.showwarning("Temporary Storage Mode", f"The program will run in temporary storage mode until the {file_name} file is created or replaced.\n\n{full_directory}")  # Show a warning message if the user does not want to create a new file.
-                    if file_data == "users": users = []             # If the "file_data" variable is set to "users", make "users" as an empty list.
-                    elif file_data == "settings":
-                        settings = default_settings                 # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                        timer.set(settings.get("enable_timer"))     # Set the timer to the value stored in the "default_settings" dictionary.
-                    data_loaded = False                             # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                    self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                    data_loaded = False      # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
                     return
-            except IOError as io_error:                             # Error control for instances such as the file being inaccessible or lacking the permission to read it.
+            
+            # Error control for instances such as the file being inaccessible or lacking the permission to read it.
+            except IOError as io_error:
                 messagebox.showwarning("File Error", f"An error occurred while reading the {file_name} file, program will run in temporary storage mode.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be read.
-                if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
-                elif file_data == "settings":
-                    settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                    timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
-                data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-            except Exception as e:                                  # Error control for any other exceptions that may occur.
+                self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+            
+            # Error control for any other exceptions that may occur.
+            except Exception as e:
                 response3 = messagebox.askyesno("Unexpected Error", f"An unexpected error occurred while reading the {file_name} file. Do you want to replace it?")  # Show an error message if there is an unexpected error.
                 if response3 == True:
                     try:
-                        with open(file_dir, "w") as file:   # Open the shortened_directory file in write mode ("w").
+                        with open(file_dir, "w") as file:  # Open the shortened_directory file in write mode ("w").
                             if file_data == "users": json.dump([], file)                                # Write an empty list to the new JSON file.
                             elif file_data == "settings": json.dump(default_settings, file, indent=4)   # Write an empty list to the new JSON file.
-                            file.close()  # Close the file after writing to it.
-                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
-                        elif file_data == "settings":
-                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
-                        data_loaded = True                                  # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
+                            file.close()    # Close the file after writing to it.
+                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                        data_loaded = True  # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
                         messagebox.showinfo("File Replaced", f"The JSON {file_name} file has been successfully replaced and restored to defaults.\n\n{full_directory}")
-                    except IOError as io_error:                             # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
+                    
+                    # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
+                    except IOError as io_error:
                         messagebox.showerror("File Error", f"An error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be replaced.
-                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
-                        elif file_data == "settings":
-                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
-                        data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-                    except Exception as e:                                  # Error control for any other exceptions that may occur.
+                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                        data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                    
+                    # Error control for any other exceptions that may occur.
+                    except Exception as e:
                         messagebox.showerror("Unexpected Error", f"An unexpected error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
-                        if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
-                        elif file_data == "settings":
-                            settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                            timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
-                        data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                        data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
                     return
                 else:
                     messagebox.showwarning("Temporary Storage Mode", f"The program will run in temporary storage mode until the {file_name} file is created or replaced.\n\n{full_directory}")  # Show a warning message if the user does not want to create a new file.
-                    if file_data == "users": users = []                 # If the "file_data" variable is set to "users", make "users" as an empty list.
-                    elif file_data == "settings":
-                        settings = default_settings                     # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                        timer.set(settings.get("enable_timer"))         # Set the timer to the value stored in the "default_settings" dictionary.
-                    data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                    self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                    data_loaded = False      # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                    return
 
 
     # Method for saving details specific to the specified window.
@@ -295,52 +325,64 @@ class Tools:
 
         elif origin == "Completion" or origin == "Scoreboard":
                 try:
-                    with open(file_dir, "w") as file:   # Open the file in write mode ("w"). If it doesn't exist, a new file will be created.
-                        json.dump(users, file, indent=4)                # Dump the entries from the "users" list into the JSON file.
-                        file.close()  # Close the file after writing to it.
-                    data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-                except IOError as io_error:                             # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
+                    with open(file_dir, "w") as file:        # Open the file in write mode ("w"). If it doesn't exist, a new file will be created.
+                        json.dump(users, file, indent=4)     # Dump the entries from the "users" list into the JSON file.
+                        file.close()                         # Close the file after writing to it.
+                    data_loaded = False                      # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                except IOError as io_error:                  # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
                     messagebox.showerror("File Error", f"Failed to write to 'scoreboard.json'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be written to.
-                except Exception as e:                                  # Error control for any other exceptions that may occur.
+                except Exception as e:                       # Error control for any other exceptions that may occur.
                     messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'scoreboard.json'.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
         
         elif origin == "Menubar":
                 global settings
                 try:
                     settings = {"enable_timer": timer.get()}
-                    with open(file_dir, "w") as file:   # Open the file in write mode ("w"). If it doesn't exist, a new file will be created.
-                        json.dump(settings, file, indent=4)             # Dump the entries from the "users" list into the JSON file.
-                        file.close()  # Close the file after writing to it.
-                    data_loaded = False                                 # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-                except IOError as io_error:                             # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
+                    with open(file_dir, "w") as file:        # Open the file in write mode ("w"). If it doesn't exist, a new file will be created.
+                        json.dump(settings, file, indent=4)  # Dump the entries from the "users" list into the JSON file.
+                        file.close()                         # Close the file after writing to it.
+                    data_loaded = False                      # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                except IOError as io_error:                  # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
                     messagebox.showerror("File Error", f"Failed to write to 'settings.json'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be written to.
-                except Exception as e:                                  # Error control for any other exceptions that may occur.
+                except Exception as e:                       # Error control for any other exceptions that may occur.
                     messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'settings.json'.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
 
 
     # Method for printing details into a PDF.
-    def print_details(self, selection):
-        if not data_loaded:  # Check if the data has been loaded from the JSON file.
-            self.load_details("scoreboard", scoreboard_file_path, "users")
+    def print_details(self, selections):
+        data = []
         
-        if users == []:  # Check if the "users" list is empty.
-            response1 = messagebox.askyesno("No Scores Recorded", "There are no recorded scores to print.\nWould you still like to print out a blank scoreboard table?")
-            if response1 == False:
+        if selections == "all" and data_loaded == False:  # Check if the data has been loaded from the JSON file only if all scores are being printed.
+            self.load_details("scoreboard", scoreboard_file_path, "users")
+    
+        if selections == "all":
+            if users == []:  # Check if the "users" list is empty.
+                response1 = messagebox.askyesno("No Scores Recorded", "There are no recorded scores to print.\nWould you still like to print out a blank scoreboard table?")
+                if response1 == False:
+                    return
+            else:
+                # Load all data from JSON file
+                with open("AppData\scoreboard.json", "r") as file:
+                    data = json.load(file)  # Load the details from the JSON file into the "data" list.
+        else:
+            if selections != []:  # Check if the "selections" list is not empty.
+                # Match the selected reference numbers in the treeview widget to the user reference numbers (user[0]) in the "users" list.
+                # This creates a new list of users that match the selected user reference numbers so that only the selected users are printed on the scoreboard PDF.
+                # "user[0]" is converted to a string to ensure that it matches the format used in the Treeview selection, which is passed as a string.
+                data = [user for user in users if str(user[0]) in selections]  # If selections are provided, use them as the scoreboard data directly.
+            else:
+                messagebox.showwarning("No Scores Selected", "Please select at least one score to print.")
                 return
+        self.scoreboard.tree.selection_set("")  # Clear the current selection in the Treeview widget.
+        self.reset_details("Scoreboard")  # Reset the "sel_reference_numbers" list in the Scoreboard class so that the list is ready for new selections.
         
         # Initialise PDF
         pdf = PDF()
         pdf.alias_nb_pages()  # Enable total page count placeholder
         pdf.add_page()        # Start with first page
-        data = []
 
         # Define table headings
         headings = ["Ref #", "Username", "Difficulty", "Questions", "Time", "Score"]
-
-        if selection == "all":
-            # Load all data from JSON file
-            with open("AppData\scoreboard.json", "r") as file:
-                data = json.load(file)  # Load the details from the JSON file into the "data" list.
 
         # Generate the table on the PDF
         pdf.scoreboard_table(data, headings)
@@ -348,14 +390,14 @@ class Tools:
         try:
             # Save the PDF to file
             pdf.output(pdf_file_path)
-            messagebox.showinfo("Print Successful", f"The scoreboard has been successfully printed to 'QWhizz Math Scoreboard.pdf'.")
-            response2 = messagebox.askyesno("Send PDF to Printer", "Would you like to send the PDF to the printer now?")  # Ask the user if they want to print the PDF.
+            messagebox.showinfo("Print Successful", f"The scoreboard has been successfully printed to 'QWhizz Math Scoreboard.pdf'.\n\n{full_pdf_directory}/QWhizz Math Scoreboard.pdf")
+            response2 = messagebox.askyesno("Send PDF to Printer", "Would you like to send the PDF to a printer now?")  # Ask the user if they want to print the PDF.
             # If the user chooses to send the PDF to a printer, proceed with printing.
             if response2 == True:
                 try:
-                    if operating_system == "Windows":  # Check if the operating system is Windows.
+                    if operating_system == "Windows":   # Check if the operating system is Windows.
                         os.startfile(pdf_file_path, "print")  # Send the PDF file to the default printer.
-                    elif operating_system == "Linux":  # Check if the operating system is Linux.
+                    elif operating_system == "Linux":   # Check if the operating system is Linux.
                         subprocess.run(["lp", pdf_file_path], check=True)  # Use the "lp" command to send the PDF file to the default printer.
                     elif operating_system == "Darwin":  # Check if the operating system is macOS.
                         subprocess.run(["lp", pdf_file_path], check=True)  # Use the "lp" command to send the PDF file to the default printer.
@@ -370,28 +412,42 @@ class Tools:
 
 
     # Method for deleting details from the "users" list.
-    def delete_details(self, selection):
+    def delete_details(self, selections):
         global users
+        users_to_delete = []  # Create an empty list to store users to delete.
+        
         if users != []:  # Check if the "users" list is not empty.
-                if selection == "all":
+                if selections == "all":
                     response = messagebox.askyesno("Delete All Scores", "Are you sure that you want to delete all recorded scores?")
                     if response == True:
                         users = []
+                        self.save_details(None, "Scoreboard", None, scoreboard_file_path)
                         self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
                         messagebox.showinfo("Scores Deleted", "All recorded scores have been deleted.")
-                        self.save_details(None, "Scoreboard", None, scoreboard_file_path)
                     else:
                         return
                 else:
-                    # Enumerate through the user details in the "users" list to find the matching reference number.
-                    # "i" represents the index of the current user in the "users" list, and "user" is the current user.
-                    for i, user in enumerate(users):
-                        if user[0] == selection:            # Check if the reference number stored in the first element "[0]" of each "user" list entry matches the selected reference number.
-                            del users[i]                    # If a match is found, delete the user score at index "i" from "users".
-                            #if delkey_binded == True:       # If "delkey_binded" variable/flag is True, unbind the "del" key so that it doesn't work when no treeview item is selected.
-                                #tree.unbind("<Delete>")
-                            #delkey_binded = False           # Set "delkey_binded" variable/flag to False so program won't try to unbind the "del" key if it hasn't been binded already.
-                    self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
+                    if selections != []:  # Check if the "selections" list is not empty.
+                        words = ["scores", "have"] if len(selections) > 1 else ["score", "has"]  # Determine whether to use "scores" and "have", or "score" and "has" in the message boxes based on the number of selected items.
+                        response = messagebox.askyesno("Delete Selected Scores", f"Are you sure that you want to delete the selected {words[0]}?")
+                        if response == True:
+                            # Create a list of users to delete based on the selections in the treeview widget.
+                            # This checks each user in the "users" list and adds them to "users_to_delete" if their reference number (user[0]) matches any reference numbers within the entries in the "selections" list.
+                            # The reference number is converted to a string to ensure it matches the format used in the Treeview selection.
+                            users_to_delete = [user for user in users if str(user[0]) in selections]  # For every user in the "users" list, check if their reference number (user[0]) is in the "selections" list. This loops through each user and adds them in the "users_to_delete" list only if their reference number matches a selected reference number.
+                            for user in users_to_delete:  # Loop through each user in the "users_to_delete" list.
+                                users.remove(user)        # Remove the user from the "users" list if they are in the "users_to_delete" list.
+                            users_to_delete.clear()       # Clear the list of users to delete.
+                            
+                            self.save_details(None, "Scoreboard", None, scoreboard_file_path)
+                            self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
+                            messagebox.showinfo("Scores Deleted", f"The selected {words[0]} {words[1]} been deleted.")
+                        else:
+                            return
+                    else:
+                        messagebox.showwarning("No Scores Selected", "Please select at least one score to delete.")
+                        return
+                self.reset_details("Scoreboard")  # Reset the "sel_reference_numbers" list in the Scoreboard class so that the list is ready for new selections.
         else:
             messagebox.showwarning("No Scores Recorded", "There are no recorded scores to delete.")
             return
@@ -405,6 +461,8 @@ class Tools:
             difficulty = None
             difficulty_num = None
             questions = None
+        elif origin == "Scoreboard":
+            self.scoreboard.sel_reference_numbers = []
 
 
     # Method for unbinding specified key events from the main window.
@@ -446,35 +504,39 @@ class About:
     def setup_about(self, origin):
         # Disable the main window to prevent interaction with it while the about window is open.
         main_window.attributes("-disabled", True)
-        self.unpause_quiz = False  # Set the flag to indicate that the quiz should not be unpaused when the "About" window is closed.
+        self.unpause_quiz = False     # Set the flag to indicate that the quiz should not be unpaused when the "About" window is closed.
         if origin == "Quiz" and quiz_paused == False: 
-            self.quiz.pause_quiz()  # Pause the quiz if the "About" window is opened from the "Quiz" window.
+            self.quiz.pause_quiz()    # Pause the quiz if the "About" window is opened from the "Quiz" window.
             self.unpause_quiz = True  # Set the flag to indicate that the quiz should be unpaused when the "About" window is closed.
         
         # Create a top-level window (separate from the main window).
         self.about_window = Toplevel(main_window, bg=main_window_bg)
+        self.about_window.withdraw()  # Withdraw the window so that it is not shown immediately.
+        if os.path.exists("AppData/Images/icon.png"):  # Check if the icon file exists before setting it.
+            self.about_window.iconphoto(False, PhotoImage(file="AppData/Images/icon.png"))  # Set the title bar icon for the "About" window.
         self.about_window.title("About")
         self.about_window.columnconfigure(0, weight=0, minsize=300)
         self.about_window.resizable(False, False)
-        self.about_window.update_idletasks()  # Process any pending events for the window before calculating the centre position later.
+        self.about_window.update_idletasks()  # Process any pending events for the window to make sure the geometry info is up-to-date before calculating the centre position later.
         
         # Centre the "About" window above the main window.
-        x = main_window.winfo_x() + main_window.winfo_width() // 2 - self.about_window.winfo_width() // 2 - 60
-        y = main_window.winfo_y() + main_window.winfo_height() // 2 - self.about_window.winfo_height() // 2 + 56
-        self.about_window.geometry(f"+{x}+{y}")
-        
+        self.x = main_window.winfo_x() + main_window.winfo_width() // 2 - self.about_window.winfo_width() // 2 - 60
+        self.y = main_window.winfo_y() + main_window.winfo_height() // 2 - self.about_window.winfo_height() // 2 + 56
+        self.about_window.geometry(f"+{self.x}+{self.y}")
         self.about_window.transient(main_window)  # Keep on top of parent window (main_window)
-        self.about_window.lift()
-        self.about_window.focus()
+        self.about_window.focus()  # Set focus to the "About" window so that it is ready for user interaction.
 
         # Create a frame inside the "About" window to hold the "about" details label.
-        self.about_frame = CTk.CTkFrame(self.about_window, fg_color=frame_fg)
+        self.about_frame = CTk.CTkFrame(self.about_window, fg_color=frame_fg, corner_radius=10)
         self.about_frame.grid(row=0, column=0, padx=10, pady=(10,5), sticky=EW)
         self.about_frame.columnconfigure(0, weight=0, minsize=300)
         
         # Add program details and a close button.
-        CTk.CTkLabel(self.about_frame, text="QWhizz Math\nVersion 2.1.2\nMade by Jack Compton", font=(default_font, 14, "bold"), text_color=font_colour, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
-        CTk.CTkButton(self.about_window, text="Close", command=lambda: self.close(), font=(default_font, 14, "bold"), height=30, fg_color=button_fg, hover_color=button_hover).grid(row=1, column=0, sticky=EW, padx=10, pady=(5,10))
+        CTk.CTkLabel(self.about_frame, text="QWhizz Math\nVersion 2.2.2\nMade by Jack Compton", font=(default_font, 14, "bold"), text_color=font_colour, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
+        CTk.CTkButton(self.about_window, text="Close", command=lambda: self.close(), font=(default_font, 14, "bold"), height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover).grid(row=1, column=0, sticky=EW, padx=10, pady=(5,10))
+        
+        # Show the "About" window after setting its position and size and adding its contents. This prevents the window from flickering when it is created and shown.
+        self.about_window.deiconify()
 
         # Override the window close (X) button behavior so that the main window is enabled again when the about window is closed using this button.
         self.about_window.protocol("WM_DELETE_WINDOW", lambda: self.close())
@@ -484,11 +546,11 @@ class About:
 
 
     def close(self):  # Add "event" parameter to allow for "event" to be passed when the binded "esc" key is pressed (though the bind doesn't include an event).
-        self.about_window.unbind("<Escape>")  # Unbind the "esc" key from the "close" function so that "esc" can be used for other purposes later.
+        self.about_window.unbind("<Escape>")        # Unbind the "esc" key from the "close" function so that "esc" can be used for other purposes later.
         main_window.attributes("-disabled", False)  # Re-enable the main window so that it can be interacted.
         if self.unpause_quiz == True:
-            self.quiz.unpause_quiz()    # Unpause the quiz if the "About" window was opened from the "Quiz" window and the quiz was previously running (not paused).
-        self.unpause_quiz = False   # Reset the flag to indicate that the quiz should not be unpaused when the "About" window is closed.
+            self.quiz.unpause_quiz()  # Unpause the quiz if the "About" window was opened from the "Quiz" window and the quiz was previously running (not paused).
+        self.unpause_quiz = False     # Reset the flag to indicate that the quiz should not be unpaused when the "About" window is closed.
         self.about_window.destroy()
 
 
@@ -502,7 +564,20 @@ class Scoreboard:
         self.completion = completion_instance   # Store a reference to the "Completion" class instance.
         self.quiz = quiz_instance               # Store a reference to the "Quiz" class instance.
         self.home = homepage_instance           # Store a reference to the "Home" class instance.
-        self.selected_scores = None
+        self.sel_reference_numbers = []         # Create a new list to store the selected reference numbers from the treeview widget.
+
+
+    # Function for handling the treeview items being selected or unselected ("<<TreeviewSelect>>" event is generated for both).
+    def on_item_selected(self, event):
+        selected_items = self.tree.selection()
+        self.sel_reference_numbers = []  # Clear the "sel_reference_numbers" list to ensure it only contains the currently selected items.
+        
+        # If items are selected, i.e. at least one item is selected in the treeview, then proceed to get the reference numbers of the selected items.
+        if selected_items:
+            # Loop through each selected item in the treeview.
+            for item_id in selected_items:
+                sel_ref_number = str(self.tree.item(item_id, "values")[0])  # Get the reference number of the selected item.
+                self.sel_reference_numbers.append(sel_ref_number)           # Append the selected reference number to the "sel_reference_numbers" list.
 
 
     def setup_scoreboard(self):
@@ -515,10 +590,10 @@ class Scoreboard:
 
         file_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         scoreboard_menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Print Selected", accelerator="Ctrl+P")
+        file_menu.add_command(label="Print Selected", accelerator="Ctrl+P", command=lambda: self.tools.print_details(self.sel_reference_numbers))
         file_menu.add_command(label="Print All", accelerator="Ctrl+Shift+P", command=lambda: self.tools.print_details("all"))
-        file_menu.add_command(label="Delete Selected", accelerator="Del")
-        file_menu.add_command(label="Delete All", accelerator="Shift+Del", command=lambda: self.tools.delete_details("all", "Scoreboard"))
+        file_menu.add_command(label="Delete Selected", accelerator="Del", command=lambda: self.tools.delete_details(self.sel_reference_numbers))
+        file_menu.add_command(label="Delete All", accelerator="Shift+Del", command=lambda: self.tools.delete_details("all"))
 
         settings_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         scoreboard_menubar.add_cascade(label="Settings", menu=settings_menu)
@@ -535,9 +610,11 @@ class Scoreboard:
         main_window.config(menu=scoreboard_menubar)
 
         # Bind key shortcuts to perform actions.
-        main_window.bind("<Control-Shift-P>", lambda e: self.tools.print_details("all"))
-        main_window.bind("<Shift-Delete>", lambda e: self.tools.delete_details("all"))
-        self.binded_keys = ["<Control-Shift-P>", "<Shift-Delete>"]
+        main_window.bind("<Control-p>", lambda e: self.tools.print_details(self.sel_reference_numbers))  # Bind the "Ctrl+P" key to the "print_details" function so that the selected receipts can be printed.
+        main_window.bind("<Control-Shift-P>", lambda e: self.tools.print_details("all"))                 # Bind the "Ctrl+Shift+P" key to the "print_details" function so that all receipts can be printed.
+        main_window.bind("<Delete>", lambda e: self.tools.delete_details(self.sel_reference_numbers))    # Bind the "del" key to the "delete_details" function so that the selected receipts can be deleted.
+        main_window.bind("<Shift-Delete>", lambda e: self.tools.delete_details("all"))                   # Bind the "Shift+del" key to the "delete_details" function so that all receipts can be deleted.
+        self.binded_keys = ["<Control-p>", "<Control-Shift-P>", "<Delete>", "<Shift-Delete>"]            # Create a list of binded keys to be used later for unbinding them when the user goes back to the home page.
         
         # Set up a content frame to place the main scoreboard top elements inside.
         top_frame1 = CTk.CTkFrame(main_window, fg_color="transparent")
@@ -549,16 +626,16 @@ class Scoreboard:
         top_frame1.columnconfigure(2, weight=0, minsize=205)
 
         # Logo creation
-        total_height = 70  # Height for the canvas and vertical centre position is calculated by the height of two buttons + 10px padding.
+        total_height = 70  # Height for the canvas and vertical centre position is calculated by the height of two buttons (60px) + 10px padding.
         self.logo_canvas = Canvas(top_frame1, bg=main_window_bg, bd=0, highlightthickness=0, width=400, height=total_height)  # Create a canvas for the banner image.
         self.logo_canvas.grid(column=0, row=0, rowspan=2, sticky=EW)
         self.logo = Image.open("AppData/Images/logo_small.png")
         self.logo = ImageTk.PhotoImage(self.logo)
-        self.logo_canvas.create_image(0, total_height / 2, anchor=W, image=self.logo)  # Add the image to the canvas by calculating the x and y coordinates for center position.
+        self.logo_canvas.create_image(0, total_height / 2, anchor=W, image=self.logo)  # Add the image to the canvas by calculating the x and y coordinates for centre-left position.
         self.logo_canvas.image = self.logo
 
         # Create the buttons.
-        CTk.CTkButton(top_frame1, text="Delete", font=(default_font, 14, "bold"), text_color=font_colour,
+        CTk.CTkButton(top_frame1, text="Delete", font=(default_font, 14, "bold"), text_color=font_colour, command=lambda: self.tools.delete_details(self.sel_reference_numbers),
                       width=200, height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover).grid(column=1, row=0, sticky=EW, padx=(0,5), pady=(0,5))
         CTk.CTkButton(top_frame1, text="Home", font=(default_font, 14, "bold"), text_color=font_colour, command=lambda: self.tools.clear_widget(self.home.setup_homepage, True, None, None, self.tools.unbind_keys(self.binded_keys)),
                       width=200, height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover).grid(column=2, row=0, sticky=EW, padx=(5,0), pady=(0,5))
@@ -567,40 +644,99 @@ class Scoreboard:
         CTk.CTkButton(top_frame1, text="Retry Quiz", font=(default_font, 14, "bold"), text_color=font_colour,
                       width=200, height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover).grid(column=2, row=1, sticky=EW, padx=(5,0), pady=(5,0))
 
-        # Set up a content frame to place the scores inside.
-        content_frame1 = CTk.CTkFrame(main_window, fg_color=frame_fg, corner_radius=10)
-        content_frame1.grid(column=0, row=1, sticky=EW, padx=20, pady=(5,20))
+        # Reload the user scores from the scoreboard.json file.
+        self.tools.load_details("scoreboard", scoreboard_file_path, "users")
 
-        # Set width for columns 0-5 (6 total) in content frame 1. Total minimum column width is 810px.
-        content_frame1.columnconfigure(0, weight=1, minsize=75)
-        content_frame1.columnconfigure(1, weight=1, minsize=290)
-        content_frame1.columnconfigure(2, weight=1, minsize=125)
-        content_frame1.columnconfigure(3, weight=1, minsize=120)
-        content_frame1.columnconfigure(4, weight=1, minsize=100)
-        content_frame1.columnconfigure(5, weight=1, minsize=100)
+        # Create a frame to hold the Treeview and scrollbar.
+        tree_frame = CTk.CTkFrame(main_window, fg_color="transparent")
+        tree_frame.grid(column=0, row=1, sticky=EW, padx=20, pady=(5,20))
 
-        # Clear previous entries
-        for widget in content_frame1.grid_slaves():
-            if int(widget.grid_info()["row"]) > 0:  # Checks if the widget is in a row larger than 0, which is where user details are displayed.
-                widget.grid_forget()                # Remove the widget from the grid by forgetting it
+        treestyle = ttk.Style()
+        treestyle.theme_use("default")
 
-        # Create the column headings
-        CTk.CTkLabel(content_frame1, font=(default_font, 14, "bold"), text_color=font_colour, text="Ref #").grid(column=0, row=0, sticky=EW, padx=5, pady=5)
-        CTk.CTkLabel(content_frame1, font=(default_font, 14, "bold"), text_color=font_colour, text="Username").grid(column=1, row=0, sticky=W, padx=5, pady=5)
-        CTk.CTkLabel(content_frame1, font=(default_font, 14, "bold"), text_color=font_colour, text="Difficulty").grid(column=2, row=0, sticky=EW, padx=5, pady=5)
-        CTk.CTkLabel(content_frame1, font=(default_font, 14, "bold"), text_color=font_colour, text="Questions").grid(column=3, row=0, sticky=EW, padx=5, pady=5)
-        CTk.CTkLabel(content_frame1, font=(default_font, 14, "bold"), text_color=font_colour, text="Time").grid(column=4, row=0, sticky=EW, padx=5, pady=5)
-        CTk.CTkLabel(content_frame1, font=(default_font, 14, "bold"), text_color=font_colour, text="Score").grid(column=5, row=0, sticky=EW, padx=5, pady=5)
+        # Configure the Treeview style for the headings.
+        treestyle.configure("custom.Treeview.Heading",
+                            background=button_fg,           # Background colour of the treeview headings.
+                            foreground="white",             # Text colour of the treeview headings.
+                            font=("Segoe UI", 10,"bold"),   # Font style of the treeview heading text.
+                            padding=(0, 5, 0 ,5),           # Vertical padding of 5 px above and below the text in the treeview headings. 
+                            relief="flat")                  # Set the relief to "ridge" to give the header less of a button-look.
+
+        # Configure the Treeview style for the field section.
+        treestyle.configure("custom.Treeview",
+                            background=frame_fg,            # Background colour of the treeview field entries.
+                            foreground="white",             # Text colour of the treeview headings.
+                            fieldbackground=frame_fg,       # Main background colour of the treeview field.
+                            rowheight=30,                   # Height of the treeview headings.
+                            bordercolor=button_fg,          # Border colour of the treeview field.
+                            borderwidth=1,                  # Border width of the treeview field.
+                            relief="flat",                  # Set the relief to "flat" to give the field a flat apperanance.
+                            font=("Segoe UI", 10))          # Font style of the treeview field text.
+
+        # Change entry selection colour using ".map()" for dynamic styling of the "selected" state.
+        treestyle.map("Treeview",
+                    background=[("selected", "#78b0f4")])  # Selection background colour of the treeview field entries.
+
+        # Change the highlight colour for the headers when the mouse hovers over them.
+        treestyle.map("custom.Treeview.Heading",
+                    background=[("active", button_fg)],     # Background colour of the treeview headings when hovered over.
+                    foreground=[("active", "white")])       # Text colour of the treeview headings when hovered over.
+
+
+        # Create a Treeview widget to display the customer receipts.
+        columns = ("Ref #", "Username", "Difficulty", "Questions", "Time", "Score")
+        self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", style="custom.Treeview", height=8, selectmode="extended")
         
-        # Add each item in the list into its own row
-        for index, details in enumerate(users):
-            list_row = index + 1
-            CTk.CTkLabel(content_frame1, font=(default_font, 13), text_color=font_colour, text=details[0]).grid(column=0, row=list_row, sticky=EW, padx=5, pady=5)
-            CTk.CTkLabel(content_frame1, font=(default_font, 13), text_color=font_colour, text=details[1]).grid(column=1, row=list_row, sticky=W, padx=5, pady=5)
-            CTk.CTkLabel(content_frame1, font=(default_font, 13), text_color=font_colour, text=details[2]).grid(column=2, row=list_row, sticky=EW, padx=5, pady=5)
-            CTk.CTkLabel(content_frame1, font=(default_font, 13), text_color=font_colour, text=details[3]).grid(column=3, row=list_row, sticky=EW, padx=5, pady=5)
-            CTk.CTkLabel(content_frame1, font=(default_font, 13), text_color=font_colour, text=details[4]).grid(column=4, row=list_row, sticky=EW, padx=5, pady=5)
-            CTk.CTkLabel(content_frame1, font=(default_font, 13), text_color=font_colour, text=details[5]).grid(column=5, row=list_row, sticky=EW, padx=5, pady=5)
+        # Define the Treeview column headings.
+        for col in columns:
+            if col == "Username":
+                self.tree.heading(col, text=col, anchor=W)
+            else:
+                self.tree.heading(col, text=col, anchor=CENTER)
+        
+        # Set individual Treeview column widths. Total width of the Treeview is 810 pixels.
+        column_widths = {
+            "Ref #": 75,
+            "Username": 290,
+            "Difficulty": 125,
+            "Questions": 120,
+            "Time": 100,
+            "Score": 100
+        }
+
+        # Configure the Treeview columns.
+        for col in columns:
+            if col == "Username":
+                self.tree.column(col, anchor=W, width=column_widths[col])
+            else:
+                self.tree.column(col, anchor=CENTER, width=column_widths[col])
+
+        try:
+            # Add each item in the list into the Treeview.
+            for index, details in enumerate(users):
+                index += 1  # Increment the index by 1 each time t
+                self.tree.insert("", "end", values=(details[0], details[1], details[2], details[3], details[4], details[5]))
+        except IndexError as index_error:  # Error control for instances such as the "users" list being empty.
+            messagebox.showerror("Invalid Data", f"The saved JSON data is invalid or incomplete.\nPlease check the file for missing fields.\n\n{index_error}\n\n{full_directory}")
+            return  # Return from the method if an IndexError occurs, preventing further execution.
+
+        self.tree.bind("<<TreeviewSelect>>", self.on_item_selected)  # Bind the treeview item selection event to the "on_item_selected" method.
+        self.tree.bind("<Motion>", "break")  # Prevent the treeview columns from being manually resized by the user by breaking the motion event.
+
+        # Create a vertical scrollbar for the Treeview if the list is higher than 8 entries.
+        if int(len(users)) > 8:
+            self.scrollbar = CTk.CTkScrollbar(tree_frame, orientation="vertical", command=self.tree.yview, height=10, button_color=button_fg, button_hover_color=button_hover)
+            self.tree.configure(yscrollcommand=self.scrollbar.set)
+            self.scrollbar.pack(side=RIGHT, fill=Y)  # Position the scrollbar inside the frame by using ".pack()".
+            self.scrollbar.bind("<Button-1>", lambda e: self.tools.on_mbtn1_click("Scoreboard", "Scrollbar"))           # Bind the left mouse button click event to the "on_mbtn1_click" method in the "Tools" class, so that the color stays dim while clicked.
+            self.scrollbar.bind("<ButtonRelease-1>", lambda e: self.tools.on_mbtn1_release("Scoreboard", "Scrollbar"))  # Bind the left mouse button release event to the "on_mbtn1_release" method in the "Tools" class, so that the color returns to normal when released.
+
+        # Position the Treeview inside the frame by using ".pack()".
+        self.tree.pack(side=LEFT, fill=BOTH, expand=True)
+
+        # Make sure the frame resizes properly by setting the weight to 1.
+        tree_frame.grid_columnconfigure(0, weight=1)
+        tree_frame.grid_rowconfigure(0, weight=1)
 
 
 
@@ -657,7 +793,7 @@ class Completion:
         lbanner = Image.open("AppData/Images/lbanner.png")
         lbanner = ImageTk.PhotoImage(lbanner)
         lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
-        lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for center position.
+        lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
         lbanner_canvas.image = lbanner
 
         # Banner creation (right side)
@@ -666,7 +802,7 @@ class Completion:
         rbanner = Image.open("AppData/Images/rbanner.png")
         rbanner = ImageTk.PhotoImage(rbanner)
         rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
-        rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for center position.
+        rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
         rbanner_canvas.image = rbanner
 
         # Set up the main content frame to place the main completion frames and elements inside.
@@ -679,7 +815,7 @@ class Completion:
         self.logo = Image.open("AppData/Images/logo.png")
         self.logo = ImageTk.PhotoImage(self.logo)
         self.logo_canvas.configure(width=410, height=self.logo.height()+5)  # Add 5 pixels to height to prevent image clipping on the bottom of image.
-        self.logo_canvas.create_image(410 / 2, self.logo.height() / 2, anchor=CENTER, image=self.logo)  # Add the image to the canvas by calculating the x and y coordinates for center position.
+        self.logo_canvas.create_image(410 / 2, self.logo.height() / 2, anchor=CENTER, image=self.logo)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
         self.logo_canvas.image = self.logo
 
         # Set up a content frame to place the main completion elements inside.
@@ -740,7 +876,7 @@ class Quiz:
         self.total_time = "00:00:00"            # Variable to store the formatted total time, defaulting to "00:00:00".
         self.user_answers = []                  # Inalise a list to store the user's answers, defaulting to an empty list.
         self.correct_answers = []               # Inalise a list to store the predefined correct answers, defaulting to an empty list.
-        self.final_score = "0/0"     # Variable to store the final score, defaulting to "0/0".
+        self.final_score = "0/0"                # Variable to store the final score, defaulting to "0/0".
         self.score = 0                          # Variable to store the active score during the quiz, defaulting to 0.
 
 
@@ -904,10 +1040,10 @@ class Quiz:
 
         main_window.config(menu=quiz_menubar)
 
-        #main_window.bind("<Control-r>")
-        main_window.bind("<Control-n>", lambda e: self.stop_timer("Quiz", "Quiz"))
-        main_window.bind("<Escape>", lambda e: self.stop_timer("Home", "Quiz"))
-        self.binded_keys = ["<Control-n>", "<Escape>"]
+        # Bind key shortcuts to perform actions.
+        main_window.bind("<Control-n>", lambda e: self.stop_timer("Quiz", "Quiz"))  # Bind Ctrl+N to start a new quiz.
+        main_window.bind("<Escape>", lambda e: self.stop_timer("Home", "Quiz"))     # Bind Escape to exit the quiz and return to the home page.
+        self.binded_keys = ["<Control-n>", "<Escape>"]                              # Create a list of binded keys to be used later for unbinding them when the user goes to a different page.
 
         # Banner creation (left side)
         lbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
@@ -915,7 +1051,7 @@ class Quiz:
         lbanner = Image.open("AppData/Images/lbanner.png")
         lbanner = ImageTk.PhotoImage(lbanner)
         lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
-        lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for center position.
+        lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
         lbanner_canvas.image = lbanner
 
         # Banner creation (right side)
@@ -924,7 +1060,7 @@ class Quiz:
         rbanner = Image.open("AppData/Images/rbanner.png")
         rbanner = ImageTk.PhotoImage(rbanner)
         rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
-        rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for center position.
+        rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
         rbanner_canvas.image = rbanner
 
         # Set up the main content frame to place the main quiz frames and elements inside.
@@ -1060,7 +1196,7 @@ class Home:
 
     # Procedure for setting up the UI elements consisting of images, labels, entry boxes, sliders (scales), and buttons.
     def setup_homepage(self):
-        global users
+        global users, deiconify_reqd
 
         # Set width for columns 0-1 (2 total) in the main window. Positive weight means the column will expand to fill the available space.
         # Setting the main window size before element creation ensures the window doesn't glitch between sizes.
@@ -1091,7 +1227,7 @@ class Home:
         lbanner = Image.open("AppData/Images/lbanner.png")
         lbanner = ImageTk.PhotoImage(lbanner)
         lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
-        lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for center position.
+        lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
         lbanner_canvas.image = lbanner
 
         # Banner creation (right side)
@@ -1100,7 +1236,7 @@ class Home:
         rbanner = Image.open("AppData/Images/rbanner.png")
         rbanner = ImageTk.PhotoImage(rbanner)
         rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
-        rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for center position.
+        rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
         rbanner_canvas.image = rbanner
 
         # Set up the main content frame to place the main home frames and elements inside.
@@ -1113,7 +1249,7 @@ class Home:
         self.logo = Image.open("AppData/Images/logo.png")
         self.logo = ImageTk.PhotoImage(self.logo)
         self.logo_canvas.configure(width=410, height=self.logo.height()+5)  # Add 5 pixels to height to prevent image clipping on the bottom of image.
-        self.logo_canvas.create_image(410 / 2, self.logo.height() / 2, anchor=CENTER, image=self.logo)  # Add the image to the canvas by calculating the x and y coordinates for center position.
+        self.logo_canvas.create_image(410 / 2, self.logo.height() / 2, anchor=CENTER, image=self.logo)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
         self.logo_canvas.image = self.logo
 
         # Set up a content frame to place the main home elements inside.
@@ -1130,9 +1266,9 @@ class Home:
         CTk.CTkLabel(home_frame1, text="Difficulty", font=(default_font, 14, "bold"), text_color=font_colour).grid(column=0, row=1, sticky=E, padx=(0,5), pady=15)
         CTk.CTkLabel(home_frame1, text="Questions", font=(default_font, 14, "bold"), text_color=font_colour).grid(column=0, row=2, sticky=E, padx=(0,5), pady=(0,20))
 
-        self.difficulty_lbl = CTk.CTkLabel(home_frame1, text="", font=(default_font, 12, "bold"), text_color=font_colour)      # Create an empty placeholder label to display the difficulty level.
+        self.difficulty_lbl = CTk.CTkLabel(home_frame1, text="", font=(default_font, 12, "bold"), text_color=font_colour)     # Create an empty placeholder label to display the difficulty level.
         self.difficulty_lbl.grid(column=2, row=1, sticky=W, padx=(5,0), pady=15)
-        self.question_amnt_lbl = CTk.CTkLabel(home_frame1, text="", font=(default_font, 12, "bold"), text_color=font_colour)   # Create an empty placeholder label to display the number of questions.
+        self.question_amnt_lbl = CTk.CTkLabel(home_frame1, text="", font=(default_font, 12, "bold"), text_color=font_colour)  # Create an empty placeholder label to display the number of questions.
         self.question_amnt_lbl.grid(column=2, row=2, sticky=W, padx=(5,0), pady=(0,20))
 
         # Set up the username entry, which is either an entry box if there are no usernames saved, or a combo box if there are usernames saved. This prevents the user from trying to open a combo box dropdown when there are no usernames saved.
@@ -1150,8 +1286,9 @@ class Home:
             self.dropdown = CTkScrollableDropdown(self.username_entry, values=[""], justify="left", button_color="transparent", fg_color="#73ace0", bg_color=frame_fg, frame_border_color="#6aa5db", frame_corner_radius=10,
                                                   scrollbar_button_color="#5997d5", scrollbar_button_hover_color="#497caf", hover_color=menu_hover, text_color=font_colour, autocomplete=True)
             self.dropdown.configure(values=usernames)  # Set the values of the combo box to the usernames of the users in the users list (user[1])
-            main_window.focus_force()  # CTkScrollableDropdown library utilises "transient()" to stay on top, so after destroying the combo box (by going to a new page - Scoreboard or Quiz) and creating it again (going back to the Home page), the main window needs to be focused. 
-                                        # If this isn't done, the focus will go back to the dropdown and prevent interaction with the combo box entry section, stopping users from being able to type inside it.
+            # CTkScrollableDropdown library utilises "transient()" to stay on top, so after destroying the combo box (by going to a new page - Scoreboard or Quiz) and creating it again (going back to the Home page), the main window needs to be focused. 
+            # If this isn't done, the focus will go back to the dropdown and prevent interaction with the combo box entry section, stopping users from being able to type inside it.
+            main_window.focus_force()  # Focus the main window to ensure interaction with the combo box entry section.
         self.username_entry.grid(column=1, row=0, padx=5, pady=(20,0), sticky=EW)
 
         self.difficulty_slider = CTk.CTkSlider(home_frame1, from_=0, to=2, number_of_steps=2, command=lambda value: self.slider_value_update("S1", value), orientation=HORIZONTAL, fg_color="#73ace0", button_color="#4d97e8")
@@ -1187,12 +1324,16 @@ class Home:
                       width=200, height=35, corner_radius=10, fg_color=button_fg, hover_color=button_hover, font=(default_font, 14, "bold"), text_color=font_colour).grid(column=0, row=1, sticky=EW, padx=(0,5))
         CTk.CTkButton(button_frame, text="Start", command=lambda:self.tools.save_details("Quiz", "Home", "Permanent", None),
                       width=200, height=35, corner_radius=10, fg_color=button_fg, hover_color=button_hover, font=(default_font, 14, "bold"), text_color=font_colour).grid(column=1, row=1, sticky=EW, padx=(5,0))
+        
+        if deiconify_reqd == True:   # Check if deiconify is required, which is True when the main window is first created on program start. 
+            main_window.deiconify()  # Show the main window after all elements are created to prevent flickering of the window before the UI is set up.
+            deiconify_reqd = False   # Set the flag to False so that the main window is not deiconified again when the Home page is set up again.
 
 
 
 # Main function for starting the program.
 def main(): 
-    global operating_system, main_window, main_window_bg, frame_fg, button_fg, button_hover, menu_active_fg, menu_hover, font_colour, default_font  # Global variables for the operating system and window UI elements/design.
+    global operating_system, main_window, deiconify_reqd, main_window_bg, frame_fg, button_fg, button_hover, button_clicked, menu_active_fg, menu_hover, font_colour, default_font  # Global variables for the operating system and window UI elements/design.
     global full_directory, full_pdf_directory, pdf_file_path, scoreboard_file_path, settings_file_path, users, quiz_paused, username, difficulty_num, questions, settings, default_settings, timer, data_loaded  # Global lists and variables for data, flags, and directories.
 
     # Get the operating system name to manage functionalities in the program with limited support for multiple operating systems.
@@ -1200,15 +1341,19 @@ def main():
     operating_system = platform.system()
 
     # Configure the main window and the variables used for UI element design.
-    main_window = Tk()                          # Initialise the main window. For scaling reasons, use a Tk window with CTk elements.
-    CTk.deactivate_automatic_dpi_awareness()    #  Deactivate the automatic DPI awareness of the CTk library, allowing it to work with Tkinter's DPI scaling. This resolves an issue with the custom combobox not scaling correctly.
-    main_window.title("QWhizz Math")            # Set the title of the window.
-    main_window.iconphoto(False, PhotoImage(file="AppData/Images/icon.png"))  # Set the title bar icon.
+    main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
+    main_window.withdraw()                          # Hide the main window until all elements are created, preventing a flicker of the window before the UI is set up.
+    deiconify_reqd = True                           # Initialise a flag to track whether the main window should be deiconified (shown) after all elements are created.
+    CTk.deactivate_automatic_dpi_awareness()        # Deactivate the automatic DPI awareness of the CTk library, allowing it to work with Tkinter's DPI scaling. This resolves an issue with the custom combobox not scaling correctly.
+    main_window.title("QWhizz Math")                # Set the title of the window.
+    if os.path.exists("AppData/Images/icon.png"):   # Check if the icon file exists before setting it.
+        main_window.iconphoto(False, PhotoImage(file="AppData/Images/icon.png"))  # Set the title bar icon.
     main_window.resizable(False, False)         # Set the resizable property for height and width to False.
     main_window_bg = "#d0ebfc"                  # Set the background colour to be used for the main window.
     frame_fg = "#87bcf4"                        # Set the foreground colour to be used for all frames.
     button_fg = "#5ba2ef"                       # Set the foreground colour to be used for all buttons.
-    button_hover = "#4989ce"                    # Set the hover colour to be used for all buttons.
+    button_hover = "#4c93e3"                    # Set the hover colour to be used for all buttons.
+    button_clicked = "#4989d8"                  # Set the clicked colour to be used for all buttons.
     menu_active_fg = "#FFFFFF"                  # Set the foreground colour to be used for active menu items.
     menu_hover = "#a3cbf5"                      # Set the hover colour to be used for all menu items.
     font_colour = "#FFFFFF"                     # Set the font colour to be used for all CTk elements.
@@ -1216,8 +1361,8 @@ def main():
     main_window.configure(bg=main_window_bg)    # Configure the main window to use the background colour (value) of the "main_window_bg variable".
 
     # Setup the directories for saving and loading data.
-    full_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"   # Get the absolute intended path of the JSON files for debugging purposes when errors and warnings occur, storing it in "full_directory".
-    full_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"  # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "full_pdf_directory".
+    full_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"  # Get the absolute intended path of the JSON files for debugging purposes when errors and warnings occur, storing it in "full_directory".
+    full_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"      # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "full_pdf_directory".
     pdf_file_path = "QWhizz Math Scoreboard.pdf"      # Set the file path for the scoreboard PDF file.
     scoreboard_file_path = "AppData/scoreboard.json"  # Set the file path for the scoreboard JSON file.
     settings_file_path = "AppData/settings.json"      # Set the file path for the settings JSON file.
