@@ -1,3 +1,4 @@
 {
-    "enable_timer": true
+    "enable_timer": true,
+    "deletion_history_states": 10
 }
