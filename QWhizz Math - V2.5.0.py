@@ -137,7 +137,7 @@ class Tools:
 
     # Method for handling errors and preventing repeated code.
     def error_control(self, file_name, file_dir, file_data, control):
-        global users, settings, timer
+        global users, settings, timer, deletion_history_states
         
         # Temporary storage mode
         if control == "Temporary":
@@ -145,12 +145,13 @@ class Tools:
             elif file_data == "settings":
                 settings = default_settings              # If the "file_data" variable is set to "settings", make "settings" store the default settings.
                 timer.set(settings.get("enable_timer"))  # Set the timer to the value stored in the "default_settings" dictionary.
+                deletion_history_states.set(settings.get("deletion_history_states"))  # Set the deletion history states to the value stored in the "default_settings" dictionary.
         return  # Exit the function after handling the error control for temporary storage mode.
 
     
     # Function for loading the "users" and "settings" lists from the JSON files.
     def load_details(self, file_name, file_dir, file_data):
-            global data_loaded, users, settings, timer
+            global data_loaded, users, settings, timer, deletion_history_states
             
             # Check if the JSON file exists. If not, create it.
             if not os.path.exists(file_dir):   
@@ -215,15 +216,20 @@ class Tools:
                 elif file_data == "settings":
                     if not isinstance(data, dict): # Check if the loaded data is a dictionary.
                         raise json.JSONDecodeError("Expected a dict", doc=str(data), pos=0)  # Raise an error if the loaded settings data is not a dictionary, simulating a JSON decode error.
+                    
+                    if "enable_timer" not in data or "deletion_history_states" not in data:
+                        raise json.JSONDecodeError("Missing required keys in settings", doc=str(data), pos=0)
+                    
                     settings.clear()    # Clear the list to prevent duplicate entries.
                     settings = data     # Modify the "settings" dictionary in place.
-                    timer.set(settings.get("enable_timer"))  # Set the timer to the value stored in the "default_settings" dictionary.
-
+                    timer.set(settings.get("enable_timer", default_settings["enable_timer"]))  # Set the timer to the value stored in the "settings" dictionary, or the default value if not found.
+                    deletion_history_states.set(settings.get("deletion_history_states", default_settings["deletion_history_states"]))  # Set the deletion history states to the value stored in the "settings" dictionary, or the default value if not found.
+                
                 data_loaded = True      # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
             
             # Error control for instances such as the JSON file having invalid data, having incorrect formatting, or being corrupted.
-            except json.JSONDecodeError:
-                response3 = messagebox.askyesno("File Error", f"Failed to decode JSON data. The {file_name} file may be corrupted or improperly formatted. Do you want to replace it?")  # Show an error message if the JSON file cannot be decoded, asking the user if they want to replace the file.
+            except json.JSONDecodeError as JSONDecodeError:
+                response3 = messagebox.askyesno("File Error", f"Failed to decode JSON data. The {file_name} file may be corrupted or improperly formatted. Do you want to replace it?\n\n{JSONDecodeError}\n\n{full_directory}")  # Show an error message if the JSON file cannot be decoded, asking the user if they want to replace the file.
                 if response3 == True:
                     try:
                         with open(file_dir, "w") as file:  # Open the shortened_directory file in write mode ("w").
@@ -337,7 +343,7 @@ class Tools:
         elif origin == "Menubar":
                 global settings
                 try:
-                    settings = {"enable_timer": timer.get()}
+                    settings = {"enable_timer": timer.get(), "deletion_history_states": deletion_history_states.get()}
                     with open(file_dir, "w") as file:        # Open the file in write mode ("w"). If it doesn't exist, a new file will be created.
                         json.dump(settings, file, indent=4)  # Dump the entries from the "users" list into the JSON file.
                         file.close()                         # Close the file after writing to it.
@@ -420,7 +426,15 @@ class Tools:
                 if selections == "all":
                     response = messagebox.askyesno("Delete All Scores", "Are you sure that you want to delete all recorded scores?")
                     if response == True:
+                        if deletion_history_states.get() > 0:  # Check if the "deletion_history_states" variable is greater than 0, which means that the deletion history is enabled.
+                            # Store all users with their indices in the "history_stack" list.
+                            history_stack.append([(user, i) for i, user in enumerate(users)])
+                            # Trim the stack to the specified history limit in the "deletion_history_states" variable if the amount of stacked scores exceeds the set amount of history states.
+                            if len(history_stack) > deletion_history_states.get():
+                                history_stack.pop(0)  # Remove the last entry from the stack (corresponding to the oldest score, which has an index of 0) if the stack exceeds the history limit.
+
                         users = []
+                        redo_stack.clear()  # Clear the "redo_stack" list to prevent any redo actions directly after deletion.
                         self.save_details(None, "Scoreboard", None, scoreboard_file_path)
                         self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
                         messagebox.showinfo("Scores Deleted", "All recorded scores have been deleted.")
@@ -431,13 +445,28 @@ class Tools:
                         words = ["scores", "have"] if len(selections) > 1 else ["score", "has"]  # Determine whether to use "scores" and "have", or "score" and "has" in the message boxes based on the number of selected items.
                         response = messagebox.askyesno("Delete Selected Scores", f"Are you sure that you want to delete the selected {words[0]}?")
                         if response == True:
-                            # Create a list of users to delete based on the selections in the treeview widget.
-                            # This checks each user in the "users" list and adds them to "users_to_delete" if their reference number (user[0]) matches any reference numbers within the entries in the "selections" list.
-                            # The reference number is converted to a string to ensure it matches the format used in the Treeview selection.
-                            users_to_delete = [user for user in users if str(user[0]) in selections]  # For every user in the "users" list, check if their reference number (user[0]) is in the "selections" list. This loops through each user and adds them in the "users_to_delete" list only if their reference number matches a selected reference number.
-                            for user in users_to_delete:  # Loop through each user in the "users_to_delete" list.
-                                users.remove(user)        # Remove the user from the "users" list if they are in the "users_to_delete" list.
-                            users_to_delete.clear()       # Clear the list of users to delete.
+                            # Find the users to delete and record their original index positions
+                            users_to_delete = []
+                            for index, user in enumerate(users):
+                                if str(user[0]) in selections:
+                                    users_to_delete.append((user, index))  # Store (user, index) in the "users_to_delete" list
+                            
+                            # Store all selected users with their indices in the "history_stack" list.
+                            if deletion_history_states.get() > 0:             # Check if the "deletion_history_states" variable is greater than 0, which means that the deletion history is enabled.
+                                history_stack.append(users_to_delete.copy())  # Use .copy() to append a snapshot of the current users_to_delete list, ensuring that future modifications to the original list (like clearing it) do not affect the stored history stack.
+                            
+                            # Trim the stack to the specified history limit in the "deletion_history_states" variable if the amount of stacked scores exceeds the set amount of history states.
+                            if len(history_stack) > deletion_history_states.get():
+                                history_stack.pop(0)  # Remove the last entry from the stack (corresponding to the oldest score, which has an index of 0) if the stack exceeds the history limit.
+
+                            # Delete users in reverse index order to avoid shifting issues.
+                            # "users_to_delete" is a list of tuples in the form (user, index), where "index" is the user's position in the "users" list.
+                            # Sorting this list by index in descending order ensures that when items are deleted, the positions of earlier items in the list are not affected.
+                            # If deletions were done in ascending order, deleting an item would shift the indices of the items that follow it, leading to incorrect deletions if more than one item is deleted at once.
+                            for user, index in sorted(users_to_delete, key=lambda x: x[1], reverse=True):  # Sort by the original index ("x[1]"), which refers to the second element ("1", being the index) in each (user, index) tuple, representing the user's original position.
+                                del users[index]     # Delete the user from the "users" list at the specified index.
+                            redo_stack.clear()       # Clear the "redo_stack" list to prevent any redo actions directly after deletion.
+                            users_to_delete.clear()  # Clear the list of users to delete.
                             
                             self.save_details(None, "Scoreboard", None, scoreboard_file_path)
                             self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
@@ -451,6 +480,41 @@ class Tools:
         else:
             messagebox.showwarning("No Scores Recorded", "There are no recorded scores to delete.")
             return
+
+
+    # Method for undoing the deletion of scores.
+    def undo_delete(self):
+        global users, history_stack
+        
+        # Check if the history stack is empty.
+        if not history_stack:  
+            return  # If the stack is empty, do nothing and return.
+        
+        last_deleted = history_stack.pop()  # Retrieve the last deleted users from the history stack.
+        redo_stack.append([(user, index) for user, index in last_deleted])  # Store the last deleted users in the redo stack for potential future redoing.
+        for user, index in last_deleted:  # Reinsert each user at their original index.
+            users.insert(index, user)
+        
+        self.save_details(None, "Scoreboard", None, scoreboard_file_path)
+        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
+
+
+    # Method for redoing the deletion of scores that were previously undone.
+    def redo_delete(self):
+        global users, history_stack, redo_stack
+
+        # Check if the redo stack is empty.
+        if not redo_stack:
+            return  # If the redo stack is empty, do nothing and return.
+        
+        last_redo = redo_stack.pop()  # Retrieve the last deleted users from the redo stack.
+        history_stack.append([(user, index) for user, index in last_redo])    # Store the last deleted users in the history stack for potential future undoing.
+        # Delete users in reverse index order to avoid shifting issues.
+        for i, index in sorted(last_redo, key=lambda x: x[1], reverse=True):  # Sort by the original index ("x[1]"), which refers to the second element ("1", being the index) in each (user, index) tuple, representing the user's original position.
+            del users[index]  # Delete the user from the "users" list at the specified index.
+        
+        self.save_details(None, "Scoreboard", None, scoreboard_file_path)
+        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
 
 
     # Method for resetting details specific to the specified window.
@@ -532,7 +596,7 @@ class About:
         self.about_frame.columnconfigure(0, weight=0, minsize=300)
         
         # Add program details and a close button.
-        CTk.CTkLabel(self.about_frame, text="QWhizz Math\nVersion 2.2.2\nMade by Jack Compton", font=(default_font, 14, "bold"), text_color=font_colour, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
+        CTk.CTkLabel(self.about_frame, text="QWhizz Math\nVersion 2.5.0\nMade by Jack Compton", font=(default_font, 14, "bold"), text_color=font_colour, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
         CTk.CTkButton(self.about_window, text="Close", command=lambda: self.close(), font=(default_font, 14, "bold"), height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover).grid(row=1, column=0, sticky=EW, padx=10, pady=(5,10))
         
         # Show the "About" window after setting its position and size and adding its contents. This prevents the window from flickering when it is created and shown.
@@ -595,12 +659,23 @@ class Scoreboard:
         file_menu.add_command(label="Delete Selected", accelerator="Del", command=lambda: self.tools.delete_details(self.sel_reference_numbers))
         file_menu.add_command(label="Delete All", accelerator="Shift+Del", command=lambda: self.tools.delete_details("all"))
 
+        edit_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        scoreboard_menubar.add_cascade(label="Edit", menu=edit_menu)
+        edit_menu.add_command(label="Undo Delete", accelerator="Ctrl+Z", command=lambda: self.tools.undo_delete())
+        edit_menu.add_command(label="Redo Delete", accelerator="Ctrl+Shift+Z", command=lambda: self.tools.redo_delete())
+
         settings_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         scoreboard_menubar.add_cascade(label="Settings", menu=settings_menu)
         timer_settings = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
         timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
         timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
+        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
 
         help_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         scoreboard_menubar.add_cascade(label="Help", menu=help_menu)
@@ -614,7 +689,9 @@ class Scoreboard:
         main_window.bind("<Control-Shift-P>", lambda e: self.tools.print_details("all"))                 # Bind the "Ctrl+Shift+P" key to the "print_details" function so that all receipts can be printed.
         main_window.bind("<Delete>", lambda e: self.tools.delete_details(self.sel_reference_numbers))    # Bind the "del" key to the "delete_details" function so that the selected receipts can be deleted.
         main_window.bind("<Shift-Delete>", lambda e: self.tools.delete_details("all"))                   # Bind the "Shift+del" key to the "delete_details" function so that all receipts can be deleted.
-        self.binded_keys = ["<Control-p>", "<Control-Shift-P>", "<Delete>", "<Shift-Delete>"]            # Create a list of binded keys to be used later for unbinding them when the user goes back to the home page.
+        main_window.bind("<Control-z>", lambda e: self.tools.undo_delete())                              # Bind the "Ctrl+Z" key to the "undo_delete" function so that the last deletion can be undone.
+        main_window.bind("<Control-Shift-Z>", lambda e: self.tools.redo_delete())                        # Bind the "Ctrl+Shift+Z" key to the "redo_delete" function so that the last deletion can be redone if it was previously undone.
+        self.binded_keys = ["<Control-p>", "<Control-Shift-P>", "<Delete>", "<Shift-Delete>", "<Control-z>", "<Control-Shift-Z>"]  # Create a list of binded keys to be used later for unbinding them when the user goes back to the home page.
         
         # Set up a content frame to place the main scoreboard top elements inside.
         top_frame1 = CTk.CTkFrame(main_window, fg_color="transparent")
@@ -779,6 +856,12 @@ class Completion:
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
         timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path), value=True)
         timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path), value=False)
+        history_settings = Menu(completion_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
+        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
 
         help_menu = Menu(completion_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         completion_menubar.add_cascade(label="Help", menu=help_menu)
@@ -1032,6 +1115,12 @@ class Quiz:
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
         timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.timer_config("Quiz", "Enable", self.tools.save_details(None, "Menubar", None, settings_file_path)), value=True)        # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
         timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.timer_config("Quiz", "Disable", self.tools.save_details(None, "Menubar", None, settings_file_path)), value=False)     # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
+        history_settings = Menu(quiz_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
+        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
 
         help_menu = Menu(quiz_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         quiz_menubar.add_cascade(label="Help", menu=help_menu)
@@ -1213,6 +1302,12 @@ class Home:
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
         timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
         timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings = Menu(home_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
+        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
 
         help_menu = Menu(home_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
         home_menubar.add_cascade(label="Help", menu=help_menu)
@@ -1334,7 +1429,8 @@ class Home:
 # Main function for starting the program.
 def main(): 
     global operating_system, main_window, deiconify_reqd, main_window_bg, frame_fg, button_fg, button_hover, button_clicked, menu_active_fg, menu_hover, font_colour, default_font  # Global variables for the operating system and window UI elements/design.
-    global full_directory, full_pdf_directory, pdf_file_path, scoreboard_file_path, settings_file_path, users, quiz_paused, username, difficulty_num, questions, settings, default_settings, timer, data_loaded  # Global lists and variables for data, flags, and directories.
+    global full_directory, full_pdf_directory, pdf_file_path, scoreboard_file_path, settings_file_path  # Global variables for the file paths of the general directories, JSON files, and the PDF scoreboard file.
+    global users, quiz_paused, username, difficulty_num, questions, settings, default_settings, timer, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
 
     # Get the operating system name to manage functionalities in the program with limited support for multiple operating systems.
     # When run on Linux, this will return "Linux". On macOS, this will return "Darwin". On Windows, this will return "Windows".
@@ -1374,8 +1470,11 @@ def main():
     difficulty_num = None                   # Initialise the difficulty_num attribute as None.
     questions = None                        # Initialise the questions attribute as None.
     settings = []                           # Create empty list for settings to be stored inside.
-    default_settings = {"enable_timer": True}
-    timer = BooleanVar(value=default_settings["enable_timer"])  # Create a "timer" BooleanVar global reference to control the timer checkbutton state, with the default value being dependent on the "enable_timer" key in the "default_settings" dictionary, setting the checkbutton in an on state.
+    default_settings = {"enable_timer": True, "deletion_history_states": 10}             # Create a dictionary for default settings, with the "enable_timer" key set to True and the "deletion_history_states" (amount of deletion events that can be undone) key set to 10. This will be used to store the default settings for the program.
+    timer = BooleanVar(value=default_settings["enable_timer"])                           # Create a "timer" BooleanVar global reference to control the timer checkbutton state, with the default value being dependent on the "enable_timer" key in the "default_settings" dictionary, setting the checkbutton in an on state.
+    deletion_history_states = IntVar(value=default_settings["deletion_history_states"])  # Create a "deletion_history_states" IntVar global reference to control the deletion history states checkbutton state, with the default value being dependent on the "deletion_history_states" key in the "default_settings" dictionary, setting the "10" checkbutton in an on state.
+    history_stack = []                      # Create an empty list stack to store deleted scores, used for undo functionality.
+    redo_stack = []                         # Create an empty list stack to store undone deletions, used for redo functionality.
     data_loaded = False                     # Initialise a flag to track whether the JSON file data has been loaded, setting it to False so that the program will attempt to reload data from the file before displaying the scoreboard.
 
     # Set up the class instances.
