@@ -125,14 +125,14 @@ class Tools:
     def on_mbtn1_click(self, origin, element):
         if origin == "Scoreboard":
             if element == "Scrollbar":
-                self.scoreboard.scrollbar.configure(button_color=button_clicked, button_hover_color=button_clicked)  # Change the scrollbar button colour to a darker blue when clicked and/or held.
+                self.scoreboard.scrollbar.configure(button_color=BUTTON_CLICKED, button_hover_color=BUTTON_CLICKED)  # Change the scrollbar button colour to a darker blue when clicked and/or held.
 
 
     # Method for handling mouse button 1 release events.
     def on_mbtn1_release(self, origin, element):
         if origin == "Scoreboard":
             if element == "Scrollbar":
-                self.scoreboard.scrollbar.configure(button_color=button_fg, button_hover_color=button_hover)  # Change the scrollbar button colour back to a light blue when released.
+                self.scoreboard.scrollbar.configure(button_color=BUTTON_FG, button_hover_color=BUTTON_HOVER)  # Change the scrollbar button colour back to a light blue when released.
 
 
     # Method for handling errors and preventing repeated code.
@@ -359,7 +359,7 @@ class Tools:
         data = []
         
         if selections == "all" and data_loaded == False:  # Check if the data has been loaded from the JSON file only if all scores are being printed.
-            self.load_details("scoreboard", scoreboard_file_path, "users")
+            self.load_details("scoreboard", SCOREBOARD_FILE_PATH, "users")
     
         if selections == "all":
             if users == []:  # Check if the "users" list is empty.
@@ -395,25 +395,32 @@ class Tools:
 
         try:
             # Save the PDF to file
-            pdf.output(pdf_file_path)
-            messagebox.showinfo("Print Successful", f"The scoreboard has been successfully printed to 'QWhizz Math Scoreboard.pdf'.\n\n{full_pdf_directory}/QWhizz Math Scoreboard.pdf")
+            pdf.output(PDF_FILE_PATH)
+            if selections == "all":
+                messagebox.showinfo("Print Successful", f"The scoreboard has been successfully printed to 'QWhizz Math Scoreboard.pdf'.\n\n{full_pdf_directory}/QWhizz Math Scoreboard.pdf")
+            else:
+                messagebox.showinfo("Print Successful", f"The selected scores have been successfully printed to 'QWhizz Math Scoreboard.pdf'.\n\n{full_pdf_directory}/QWhizz Math Scoreboard.pdf")
             response2 = messagebox.askyesno("Send PDF to Printer", "Would you like to send the PDF to a printer now?")  # Ask the user if they want to print the PDF.
             # If the user chooses to send the PDF to a printer, proceed with printing.
             if response2 == True:
                 try:
                     if operating_system == "Windows":   # Check if the operating system is Windows.
-                        os.startfile(pdf_file_path, "print")  # Send the PDF file to the default printer.
+                        os.startfile(PDF_FILE_PATH, "print")  # Send the PDF file to the default printer.
                     elif operating_system == "Linux":   # Check if the operating system is Linux.
-                        subprocess.run(["lp", pdf_file_path], check=True)  # Use the "lp" command to send the PDF file to the default printer.
+                        subprocess.run(["lp", PDF_FILE_PATH], check=True)  # Use the "lp" command to send the PDF file to the default printer.
                     elif operating_system == "Darwin":  # Check if the operating system is macOS.
-                        subprocess.run(["lp", pdf_file_path], check=True)  # Use the "lp" command to send the PDF file to the default printer.
+                        subprocess.run(["lp", PDF_FILE_PATH], check=True)  # Use the "lp" command to send the PDF file to the default printer.
                     else:
                         messagebox.showwarning("Unsupported OS", f"Your operating system ({operating_system}) is not supported for printing. Please print the PDF manually.\n\n{full_pdf_directory}")  # Show a warning message if the operating system is not supported for printing.
                 except Exception as e:
                     messagebox.showerror("Printing Error", f"An error occurred while printing the PDF file.\n\n{e}\n\n{full_pdf_directory}")
-        except IOError as io_error:     # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
+        
+        # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
+        except IOError as io_error:
             messagebox.showerror("File Error", f"Failed to write to 'QWhizz Math Scoreboard.pdf'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{full_pdf_directory}")  # Show an error message if the file cannot be written to.
-        except Exception as e:          # Error control for any other exceptions that may occur.
+        
+        # Error control for any other exceptions that may occur.
+        except Exception as e:
             messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'QWhizz Math Scoreboard.pdf'.\n\n{e}\n\n{full_pdf_directory}")  # Show an error message if there is an unexpected error.
 
 
@@ -435,7 +442,7 @@ class Tools:
 
                         users = []
                         redo_stack.clear()  # Clear the "redo_stack" list to prevent any redo actions directly after deletion.
-                        self.save_details(None, "Scoreboard", None, scoreboard_file_path)
+                        self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
                         self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
                         messagebox.showinfo("Scores Deleted", "All recorded scores have been deleted.")
                     else:
@@ -468,7 +475,7 @@ class Tools:
                             redo_stack.clear()       # Clear the "redo_stack" list to prevent any redo actions directly after deletion.
                             users_to_delete.clear()  # Clear the list of users to delete.
                             
-                            self.save_details(None, "Scoreboard", None, scoreboard_file_path)
+                            self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
                             self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
                             messagebox.showinfo("Scores Deleted", f"The selected {words[0]} {words[1]} been deleted.")
                         else:
@@ -495,7 +502,7 @@ class Tools:
         for user, index in last_deleted:  # Reinsert each user at their original index.
             users.insert(index, user)
         
-        self.save_details(None, "Scoreboard", None, scoreboard_file_path)
+        self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
         self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
 
 
@@ -513,7 +520,7 @@ class Tools:
         for i, index in sorted(last_redo, key=lambda x: x[1], reverse=True):  # Sort by the original index ("x[1]"), which refers to the second element ("1", being the index) in each (user, index) tuple, representing the user's original position.
             del users[index]  # Delete the user from the "users" list at the specified index.
         
-        self.save_details(None, "Scoreboard", None, scoreboard_file_path)
+        self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
         self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
 
 
@@ -541,17 +548,22 @@ class Tools:
     def timer_config(self, origin, command, procedure):
         if origin == "Quiz":
             if command == "Enable":
-                self.quiz.timer_lbl.configure(text=f"Time: {self.quiz.time_string}")
-            if command == "Disable":
-                self.quiz.timer_lbl.configure(text="Timer Disabled")
+                return (f"Time: {self.quiz.time_string}")
+            elif command == "Disable":
+                return "Timer Disabled"
         
-        if origin == "Completion":
+        elif origin == "Quiz Menubar":
             if command == "Enable":
-                self.completion.total_time_lbl.configure(text=f"Total Time: {self.quiz.total_time}")
-            if command == "Disable":
-                self.completion.total_time_lbl.configure(text="Timer Disabled")
-        
-        if procedure != None: procedure()
+                self.quiz.timer_lbl.configure(text=f"Time: {self.quiz.time_string}")
+            elif command == "Disable":
+                self.quiz.timer_lbl.configure(text="Timer Disabled")
+            if procedure != None: procedure()
+
+        elif origin == "Completion":
+            if command == "Enable":
+                return (f"Total Time: {self.quiz.total_time}")
+            elif command == "Disable":
+                return "Timer Disabled"
 
 
 
@@ -574,7 +586,7 @@ class About:
             self.unpause_quiz = True  # Set the flag to indicate that the quiz should be unpaused when the "About" window is closed.
         
         # Create a top-level window (separate from the main window).
-        self.about_window = Toplevel(main_window, bg=main_window_bg)
+        self.about_window = Toplevel(main_window, bg=MAIN_WINDOW_BG)
         self.about_window.withdraw()  # Withdraw the window so that it is not shown immediately.
         if os.path.exists("AppData/Images/icon.png"):  # Check if the icon file exists before setting it.
             self.about_window.iconphoto(False, PhotoImage(file="AppData/Images/icon.png"))  # Set the title bar icon for the "About" window.
@@ -591,13 +603,13 @@ class About:
         self.about_window.focus()  # Set focus to the "About" window so that it is ready for user interaction.
 
         # Create a frame inside the "About" window to hold the "about" details label.
-        self.about_frame = CTk.CTkFrame(self.about_window, fg_color=frame_fg, corner_radius=10)
+        self.about_frame = CTk.CTkFrame(self.about_window, fg_color=FRAME_FG, corner_radius=10)
         self.about_frame.grid(row=0, column=0, padx=10, pady=(10,5), sticky=EW)
         self.about_frame.columnconfigure(0, weight=0, minsize=300)
         
         # Add program details and a close button.
-        CTk.CTkLabel(self.about_frame, text="QWhizz Math\nVersion 2.5.0\nMade by Jack Compton", font=(default_font, 14, "bold"), text_color=font_colour, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
-        CTk.CTkButton(self.about_window, text="Close", command=lambda: self.close(), font=(default_font, 14, "bold"), height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover).grid(row=1, column=0, sticky=EW, padx=10, pady=(5,10))
+        CTk.CTkLabel(self.about_frame, text=f"QWhizz Math\nVersion {APP_VERSION}\nMade by Jack Compton", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
+        CTk.CTkButton(self.about_window, text="Close", command=lambda: self.close(), font=(DEFAULT_FONT, 14, "bold"), height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(row=1, column=0, sticky=EW, padx=10, pady=(5,10))
         
         # Show the "About" window after setting its position and size and adding its contents. This prevents the window from flickering when it is created and shown.
         self.about_window.deiconify()
@@ -652,32 +664,32 @@ class Scoreboard:
         # Set up the menu bar.
         scoreboard_menubar = Menu(main_window)  # Create a new menu bar.
 
-        file_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        file_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         scoreboard_menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Print Selected", accelerator="Ctrl+P", command=lambda: self.tools.print_details(self.sel_reference_numbers))
         file_menu.add_command(label="Print All", accelerator="Ctrl+Shift+P", command=lambda: self.tools.print_details("all"))
         file_menu.add_command(label="Delete Selected", accelerator="Del", command=lambda: self.tools.delete_details(self.sel_reference_numbers))
         file_menu.add_command(label="Delete All", accelerator="Shift+Del", command=lambda: self.tools.delete_details("all"))
 
-        edit_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        edit_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         scoreboard_menubar.add_cascade(label="Edit", menu=edit_menu)
         edit_menu.add_command(label="Undo Delete", accelerator="Ctrl+Z", command=lambda: self.tools.undo_delete())
         edit_menu.add_command(label="Redo Delete", accelerator="Ctrl+Shift+Z", command=lambda: self.tools.redo_delete())
 
-        settings_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        settings_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         scoreboard_menubar.add_cascade(label="Settings", menu=settings_menu)
-        timer_settings = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        timer_settings = Menu(scoreboard_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
-        timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings = Menu(scoreboard_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
-        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
 
-        help_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        help_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         scoreboard_menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="Documentation")
         help_menu.add_command(label="About", command=lambda: self.about.setup_about("Scoreboard"))
@@ -704,7 +716,7 @@ class Scoreboard:
 
         # Logo creation
         total_height = 70  # Height for the canvas and vertical centre position is calculated by the height of two buttons (60px) + 10px padding.
-        self.logo_canvas = Canvas(top_frame1, bg=main_window_bg, bd=0, highlightthickness=0, width=400, height=total_height)  # Create a canvas for the banner image.
+        self.logo_canvas = Canvas(top_frame1, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0, width=400, height=total_height)  # Create a canvas for the banner image.
         self.logo_canvas.grid(column=0, row=0, rowspan=2, sticky=EW)
         self.logo = Image.open("AppData/Images/logo_small.png")
         self.logo = ImageTk.PhotoImage(self.logo)
@@ -712,17 +724,17 @@ class Scoreboard:
         self.logo_canvas.image = self.logo
 
         # Create the buttons.
-        CTk.CTkButton(top_frame1, text="Delete", font=(default_font, 14, "bold"), text_color=font_colour, command=lambda: self.tools.delete_details(self.sel_reference_numbers),
-                      width=200, height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover).grid(column=1, row=0, sticky=EW, padx=(0,5), pady=(0,5))
-        CTk.CTkButton(top_frame1, text="Home", font=(default_font, 14, "bold"), text_color=font_colour, command=lambda: self.tools.clear_widget(self.home.setup_homepage, True, None, None, self.tools.unbind_keys(self.binded_keys)),
-                      width=200, height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover).grid(column=2, row=0, sticky=EW, padx=(5,0), pady=(0,5))
-        CTk.CTkButton(top_frame1, text="View Answers", font=(default_font, 14, "bold"), text_color=font_colour,
-                      width=200, height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover).grid(column=1, row=1, sticky=EW, padx=(0,5), pady=(5,0))
-        CTk.CTkButton(top_frame1, text="Retry Quiz", font=(default_font, 14, "bold"), text_color=font_colour,
-                      width=200, height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover).grid(column=2, row=1, sticky=EW, padx=(5,0), pady=(5,0))
+        CTk.CTkButton(top_frame1, text="Delete", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.tools.delete_details(self.sel_reference_numbers),
+                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=1, row=0, sticky=EW, padx=(0,5), pady=(0,5))
+        CTk.CTkButton(top_frame1, text="Home", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.tools.clear_widget(self.home.setup_homepage, True, None, None, self.tools.unbind_keys(self.binded_keys)),
+                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=2, row=0, sticky=EW, padx=(5,0), pady=(0,5))
+        CTk.CTkButton(top_frame1, text="View Answers", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR,
+                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=1, row=1, sticky=EW, padx=(0,5), pady=(5,0))
+        CTk.CTkButton(top_frame1, text="Retry Quiz", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR,
+                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=2, row=1, sticky=EW, padx=(5,0), pady=(5,0))
 
         # Reload the user scores from the scoreboard.json file.
-        self.tools.load_details("scoreboard", scoreboard_file_path, "users")
+        self.tools.load_details("scoreboard", SCOREBOARD_FILE_PATH, "users")
 
         # Create a frame to hold the Treeview and scrollbar.
         tree_frame = CTk.CTkFrame(main_window, fg_color="transparent")
@@ -733,7 +745,7 @@ class Scoreboard:
 
         # Configure the Treeview style for the headings.
         treestyle.configure("custom.Treeview.Heading",
-                            background=button_fg,           # Background colour of the treeview headings.
+                            background=BUTTON_FG,           # Background colour of the treeview headings.
                             foreground="white",             # Text colour of the treeview headings.
                             font=("Segoe UI", 10,"bold"),   # Font style of the treeview heading text.
                             padding=(0, 5, 0 ,5),           # Vertical padding of 5 px above and below the text in the treeview headings. 
@@ -741,11 +753,11 @@ class Scoreboard:
 
         # Configure the Treeview style for the field section.
         treestyle.configure("custom.Treeview",
-                            background=frame_fg,            # Background colour of the treeview field entries.
+                            background=FRAME_FG,            # Background colour of the treeview field entries.
                             foreground="white",             # Text colour of the treeview headings.
-                            fieldbackground=frame_fg,       # Main background colour of the treeview field.
+                            fieldbackground=FRAME_FG,       # Main background colour of the treeview field.
                             rowheight=30,                   # Height of the treeview headings.
-                            bordercolor=button_fg,          # Border colour of the treeview field.
+                            bordercolor=BUTTON_FG,          # Border colour of the treeview field.
                             borderwidth=1,                  # Border width of the treeview field.
                             relief="flat",                  # Set the relief to "flat" to give the field a flat apperanance.
                             font=("Segoe UI", 10))          # Font style of the treeview field text.
@@ -756,7 +768,7 @@ class Scoreboard:
 
         # Change the highlight colour for the headers when the mouse hovers over them.
         treestyle.map("custom.Treeview.Heading",
-                    background=[("active", button_fg)],     # Background colour of the treeview headings when hovered over.
+                    background=[("active", BUTTON_FG)],     # Background colour of the treeview headings when hovered over.
                     foreground=[("active", "white")])       # Text colour of the treeview headings when hovered over.
 
 
@@ -802,7 +814,7 @@ class Scoreboard:
 
         # Create a vertical scrollbar for the Treeview if the list is higher than 8 entries.
         if int(len(users)) > 8:
-            self.scrollbar = CTk.CTkScrollbar(tree_frame, orientation="vertical", command=self.tree.yview, height=10, button_color=button_fg, button_hover_color=button_hover)
+            self.scrollbar = CTk.CTkScrollbar(tree_frame, orientation="vertical", command=self.tree.yview, height=10, button_color=BUTTON_FG, button_hover_color=BUTTON_HOVER)
             self.tree.configure(yscrollcommand=self.scrollbar.set)
             self.scrollbar.pack(side=RIGHT, fill=Y)  # Position the scrollbar inside the frame by using ".pack()".
             self.scrollbar.bind("<Button-1>", lambda e: self.tools.on_mbtn1_click("Scoreboard", "Scrollbar"))           # Bind the left mouse button click event to the "on_mbtn1_click" method in the "Tools" class, so that the color stays dim while clicked.
@@ -838,7 +850,7 @@ class Completion:
         else:
             self.time = "Disabled"
         users.append([ref_number, username, difficulty, questions, self.time, self.quiz.final_score])  # Add the next user and their quiz details to the "users" list.
-        self.tools.save_details(None, "Completion", None, scoreboard_file_path)  # Save the details to the JSON file.
+        self.tools.save_details(None, "Completion", None, SCOREBOARD_FILE_PATH)  # Save the details to the JSON file.
         self.setup_completion()
 
 
@@ -850,20 +862,20 @@ class Completion:
         # Set up the menu bar.
         completion_menubar = Menu(main_window)  # Create a new menu bar.
 
-        settings_menu = Menu(completion_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        settings_menu = Menu(completion_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         completion_menubar.add_cascade(label="Settings", menu=settings_menu)
-        timer_settings = Menu(completion_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        timer_settings = Menu(completion_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
-        timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path), value=True)
-        timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path), value=False)
-        history_settings = Menu(completion_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH), value=True)
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH), value=False)
+        history_settings = Menu(completion_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
-        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
 
-        help_menu = Menu(completion_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        help_menu = Menu(completion_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         completion_menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="Documentation")
         help_menu.add_command(label="About", command=lambda: self.about.setup_about("Completion"))
@@ -871,7 +883,7 @@ class Completion:
         main_window.config(menu=completion_menubar)
 
         # Banner creation (left side)
-        lbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+        lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
         lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0))
         lbanner = Image.open("AppData/Images/lbanner.png")
         lbanner = ImageTk.PhotoImage(lbanner)
@@ -880,7 +892,7 @@ class Completion:
         lbanner_canvas.image = lbanner
 
         # Banner creation (right side)
-        rbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+        rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
         rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20))
         rbanner = Image.open("AppData/Images/rbanner.png")
         rbanner = ImageTk.PhotoImage(rbanner)
@@ -893,7 +905,7 @@ class Completion:
         self.main_content_frame.grid(column=1, row=0, sticky=EW, padx=35, pady=(0,20))
 
         # Logo creation
-        self.logo_canvas = Canvas(self.main_content_frame, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+        self.logo_canvas = Canvas(self.main_content_frame, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
         self.logo_canvas.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,0))
         self.logo = Image.open("AppData/Images/logo.png")
         self.logo = ImageTk.PhotoImage(self.logo)
@@ -902,22 +914,22 @@ class Completion:
         self.logo_canvas.image = self.logo
 
         # Set up a content frame to place the main completion elements inside.
-        completion_frame1 = CTk.CTkFrame(self.main_content_frame, fg_color=frame_fg, corner_radius=10)
+        completion_frame1 = CTk.CTkFrame(self.main_content_frame, fg_color=FRAME_FG, corner_radius=10)
         completion_frame1.grid(column=0, row=1, sticky=EW, padx=20, pady=(20,5))
 
         # Set width for column 0 (1 total) in completion frame 1. Total minimum column width is 410px.
         completion_frame1.columnconfigure(0, weight=1, minsize=410)
 
         # Create the labels to be placed next to their relevant entry boxes.
-        CTk.CTkLabel(completion_frame1, text="Quiz Complete!", font=(default_font, 18, "bold"), text_color=font_colour).grid(column=0, row=0, sticky=EW, padx=5, pady=(20,8))
-        CTk.CTkLabel(completion_frame1, text=f"You scored a total of: {self.quiz.score}/{questions}", font=(default_font, 15), text_color=font_colour).grid(column=0, row=1, sticky=EW, padx=5)
-        CTk.CTkLabel(completion_frame1, text=f"Difficulty: {difficulty}", font=(default_font, 15), text_color=font_colour).grid(column=0, row=2, sticky=EW, padx=5)
-        self.total_time_lbl = CTk.CTkLabel(completion_frame1, text="", font=(default_font, 15), text_color=font_colour)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
+        CTk.CTkLabel(completion_frame1, text="Quiz Complete!", font=(DEFAULT_FONT, 18, "bold"), text_color=FONT_COLOUR).grid(column=0, row=0, sticky=EW, padx=5, pady=(20,8))
+        CTk.CTkLabel(completion_frame1, text=f"You scored a total of: {self.quiz.score}/{questions}", font=(DEFAULT_FONT, 15), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=EW, padx=5)
+        CTk.CTkLabel(completion_frame1, text=f"Difficulty: {difficulty}", font=(DEFAULT_FONT, 15), text_color=FONT_COLOUR).grid(column=0, row=2, sticky=EW, padx=5)
+        self.total_time_lbl = CTk.CTkLabel(completion_frame1, text="", font=(DEFAULT_FONT, 15), text_color=FONT_COLOUR)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
         self.total_time_lbl.grid(column=0, row=3, sticky=EW, padx=5, pady=(0,20))
         if timer.get() == True:
-            self.tools.timer_config("Completion", "Enable", None)
+            self.total_time_lbl.configure(text=self.tools.timer_config("Completion", "Enable", None))  # Use the "timer_config" function to update the label text relative to the state of the timer.
         if timer.get() == False:
-            self.tools.timer_config("Completion", "Disable", None)
+            self.total_time_lbl.configure(text=self.tools.timer_config("Completion", "Disable", None))  # Use the "timer_config" function to update the label text relative to the state of the timer.
 
         # Create a frame to place the buttons inside.
         button_frame = CTk.CTkFrame(self.main_content_frame, fg_color="transparent")
@@ -929,13 +941,13 @@ class Completion:
 
         # Create the buttons.
         CTk.CTkButton(button_frame, text="View Answers",
-                      width=200, height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover, font=(default_font, 14, "bold"), text_color=font_colour).grid(column=0, row=0, sticky=EW, padx=(0,5), pady=(0,5))
+                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=0, sticky=EW, padx=(0,5), pady=(0,5))
         CTk.CTkButton(button_frame, text="Retry Quiz",
-                      width=200, height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover, font=(default_font, 14, "bold"), text_color=font_colour).grid(column=1, row=0, sticky=EW, padx=(5,0), pady=(0,5))
+                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=1, row=0, sticky=EW, padx=(5,0), pady=(0,5))
         CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.quiz.reset_timer("Scoreboard", "Completion"),
-                      width=200, height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover, font=(default_font, 14, "bold"), text_color=font_colour).grid(column=0, row=1, sticky=EW, padx=(0,5), pady=(5,0))
+                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=EW, padx=(0,5), pady=(5,0))
         CTk.CTkButton(button_frame, text="Home", command=lambda: self.quiz.reset_timer("Home", "Completion"),
-                      width=200, height=30, corner_radius=10, fg_color=button_fg, hover_color=button_hover, font=(default_font, 14, "bold"), text_color=font_colour).grid(column=1, row=1, sticky=EW, padx=(5,0), pady=(5,0))
+                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=1, row=1, sticky=EW, padx=(5,0), pady=(5,0))
 
 
 
@@ -1018,14 +1030,14 @@ class Quiz:
         
         # Create a pause overlay to visually block the quiz content until the quiz is unpaused.
         height = self.question_frame.winfo_height() + self.answer_frame.winfo_height() + 10  # Get the total height of both frames (question and answer frames), including the height of padding.
-        self.pause_frame = CTk.CTkFrame(self.main_content_frame, fg_color=frame_fg, corner_radius=10)
+        self.pause_frame = CTk.CTkFrame(self.main_content_frame, fg_color=FRAME_FG, corner_radius=10)
         self.pause_frame.grid(column=0, row=1, rowspan=2, sticky=EW, padx=20, pady=(5,0))
         
         # Set width for column 0 (1 total) and row 0 (1 total) in the pause frame.
         self.pause_frame.columnconfigure(0, weight=0, minsize=410)
         self.pause_frame.rowconfigure(0, weight=0, minsize=height)
 
-        CTk.CTkLabel(self.pause_frame, text="Quiz Paused", font=(default_font, 20, "bold"), text_color=font_colour).grid(column=0, row=0, columnspan=2, sticky=EW)
+        CTk.CTkLabel(self.pause_frame, text="Quiz Paused", font=(DEFAULT_FONT, 20, "bold"), text_color=FONT_COLOUR).grid(column=0, row=0, columnspan=2, sticky=EW)
         
 
     def unpause_quiz(self):
@@ -1103,26 +1115,26 @@ class Quiz:
         # Set up the menu bar.
         quiz_menubar = Menu(main_window)  # Create a new menu bar.
         
-        quiz_menu = Menu(quiz_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        quiz_menu = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         quiz_menubar.add_cascade(label="Quiz", menu=quiz_menu)
         quiz_menu.add_command(label="Restart Quiz", accelerator="Ctrl+R")
         quiz_menu.add_command(label="New Quiz", accelerator="Ctrl+N", command=lambda: self.stop_timer("Quiz", "Quiz"))
         quiz_menu.add_command(label="Exit Quiz", accelerator="Esc", command=lambda: self.stop_timer("Home", "Quiz"))
 
-        settings_menu = Menu(quiz_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        settings_menu = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         quiz_menubar.add_cascade(label="Settings", menu=settings_menu)
-        timer_settings = Menu(quiz_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        timer_settings = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
-        timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.timer_config("Quiz", "Enable", self.tools.save_details(None, "Menubar", None, settings_file_path)), value=True)        # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
-        timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.timer_config("Quiz", "Disable", self.tools.save_details(None, "Menubar", None, settings_file_path)), value=False)     # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
-        history_settings = Menu(quiz_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.timer_config("Quiz Menubar", "Enable", self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH)), value=True)        # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.timer_config("Quiz Menubar", "Disable", self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH)), value=False)     # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
+        history_settings = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
-        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
 
-        help_menu = Menu(quiz_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        help_menu = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         quiz_menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="Documentation")
         help_menu.add_command(label="About", command=lambda: self.about.setup_about("Quiz"))
@@ -1135,7 +1147,7 @@ class Quiz:
         self.binded_keys = ["<Control-n>", "<Escape>"]                              # Create a list of binded keys to be used later for unbinding them when the user goes to a different page.
 
         # Banner creation (left side)
-        lbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+        lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
         lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0))
         lbanner = Image.open("AppData/Images/lbanner.png")
         lbanner = ImageTk.PhotoImage(lbanner)
@@ -1144,7 +1156,7 @@ class Quiz:
         lbanner_canvas.image = lbanner
 
         # Banner creation (right side)
-        rbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+        rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
         rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20))
         rbanner = Image.open("AppData/Images/rbanner.png")
         rbanner = ImageTk.PhotoImage(rbanner)
@@ -1157,7 +1169,7 @@ class Quiz:
         self.main_content_frame.grid(column=1, row=0, sticky=EW, padx=35, pady=(24,25))
 
         # Set up a content frame to place the top quiz elements inside.
-        quiz_dtls_frame1 = CTk.CTkFrame(self.main_content_frame, fg_color=frame_fg, corner_radius=10)
+        quiz_dtls_frame1 = CTk.CTkFrame(self.main_content_frame, fg_color=FRAME_FG, corner_radius=10)
         quiz_dtls_frame1.grid(column=0, row=0, sticky=EW, padx=20, pady=(0,5))
         
         # Set width for columns 0-2 (3 total) in quiz details frame 1. Total minimum column width is 410px.
@@ -1174,19 +1186,19 @@ class Quiz:
         self.play_img = CTk.CTkImage(self.play_image, size=(16, 17))  # Create a CTkImage object with the pause image to allow scaling to be used.
 
         # Create the labels and pause button to be placed at the top of the quiz page.
-        self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{questions}", font=(default_font, 14, "bold"), text_color=font_colour)
+        self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{questions}", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR)
         self.question_no_lbl.grid(column=0, row=0, pady=10, sticky=NSEW)
-        self.pause_btn = CTk.CTkButton(quiz_dtls_frame1, text=None, font=(default_font, 14, "bold"), text_color=font_colour, command=self.pause_quiz, width=40, height=30, corner_radius=7.5, image=self.pause_img, fg_color=button_fg, hover_color=button_hover)
+        self.pause_btn = CTk.CTkButton(quiz_dtls_frame1, text=None, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=self.pause_quiz, width=40, height=30, corner_radius=7.5, image=self.pause_img, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
         self.pause_btn.grid(column=1, row=0, pady=10)
-        self.timer_lbl = CTk.CTkLabel(quiz_dtls_frame1, text="", font=(default_font, 14, "bold"), text_color=font_colour)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
+        self.timer_lbl = CTk.CTkLabel(quiz_dtls_frame1, text="", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
         self.timer_lbl.grid(column=2, row=0, pady=10, sticky=NSEW)
         if timer.get() == True:
-            self.tools.timer_config("Quiz", "Enable", None)
+            self.timer_lbl.configure(text=self.tools.timer_config("Quiz", "Enable", None))
         elif timer.get() == False:
-            self.tools.timer_config("Quiz", "Disable", None)
+            self.timer_lbl.configure(text=self.tools.timer_config("Quiz", "Disable", None))
 
         # Create a frame for the question label or question image.
-        self.question_frame = CTk.CTkFrame(self.main_content_frame, fg_color=frame_fg, corner_radius=10)
+        self.question_frame = CTk.CTkFrame(self.main_content_frame, fg_color=FRAME_FG, corner_radius=10)
         self.question_frame.grid(column=0, row=1, sticky=EW, padx=20, pady=5)
         
         # Set width for column 0 (1 total) and row 0 (1 total) in quiz details frame 1.
@@ -1198,7 +1210,7 @@ class Quiz:
         #question_canvas.grid(row=0, column=0, pady=10)
         
         # Create a label for the question text.
-        question_lbl = CTk.CTkLabel(self.question_frame, text="It's looking a little empty...", font=(default_font, 20, "bold"), text_color=font_colour)
+        question_lbl = CTk.CTkLabel(self.question_frame, text="It's looking a little empty...", font=(DEFAULT_FONT, 20, "bold"), text_color=FONT_COLOUR)
         question_lbl.grid(column=0, row=0)
 
         # Create a frame for the answer buttons
@@ -1231,13 +1243,13 @@ class Quiz:
         self.correct_answers = ["A"] * questions
 
         # Create the answer buttons.
-        btn_1 = CTk.CTkButton(self.answer_frame, text=f" A.    {answer_1}", font=(default_font, 16, "bold"), text_color=font_colour, command=lambda: self.answer_management("A"), anchor=W, width=200, height=40, corner_radius=10, fg_color=button_fg, hover_color=button_hover)
+        btn_1 = CTk.CTkButton(self.answer_frame, text=f" A.    {answer_1}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management("A"), anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
         btn_1.grid(column=0, row=0, padx=(0, 5), pady=(0,5))
-        btn_2 = CTk.CTkButton(self.answer_frame, text=f" B.    {answer_2}", font=(default_font, 16, "bold"), text_color=font_colour, command=lambda: self.answer_management("B"), anchor=W, width=200, height=40, corner_radius=10, fg_color=button_fg, hover_color=button_hover)
+        btn_2 = CTk.CTkButton(self.answer_frame, text=f" B.    {answer_2}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management("B"), anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
         btn_2.grid(column=1, row=0, padx=(5, 0), pady=(0,5))
-        btn_3 = CTk.CTkButton(self.answer_frame, text=f" C.    {answer_3}", font=(default_font, 16, "bold"), text_color=font_colour, command=lambda: self.answer_management("C"), anchor=W, width=200, height=40, corner_radius=10, fg_color=button_fg, hover_color=button_hover)
+        btn_3 = CTk.CTkButton(self.answer_frame, text=f" C.    {answer_3}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management("C"), anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
         btn_3.grid(column=0, row=1, padx=(0, 5), pady=(5,0))
-        btn_4 = CTk.CTkButton(self.answer_frame, text=f" D.    {answer_4}", font=(default_font, 16, "bold"), text_color=font_colour, command=lambda: self.answer_management("D"), anchor=W, width=200, height=40, corner_radius=10, fg_color=button_fg, hover_color=button_hover)
+        btn_4 = CTk.CTkButton(self.answer_frame, text=f" D.    {answer_4}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management("D"), anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
         btn_4.grid(column=1, row=1, padx=(5, 0), pady=(5,0))
 
         self.start_timer()
@@ -1255,8 +1267,8 @@ class Home:
         self.quiz = quiz_instance               # Store a reference to the "Quiz" class instance.
 
 
-    # Procedure for updating the difficulty and question number labels based on the interpreted slider values.
-    def slider_value_update(self, slider_id, value):
+    # Method for processing slider values and returning a tuple containing the difficulty, color, and hover color, or the number of questions.
+    def process_slider_value(self, slider_id, value):
         global difficulty
         if slider_id == "S1":
             if value == 0:
@@ -1271,10 +1283,20 @@ class Home:
                 difficulty = "Hard"
                 color = "#f37272"
                 hover_color = "#d36565"
-            self.difficulty_lbl.configure(text=difficulty)
-            self.difficulty_slider.configure(button_color=color, progress_color=color, button_hover_color=hover_color)
+            return ([difficulty, color, hover_color])
         if slider_id == "S2":
-            self.question_amnt_lbl.configure(text=f"{int(value)} Questions")
+            return (f"{int(value)} Questions")
+
+    
+    # Method for updating the difficulty label, difficulty slider, and question amount label based on slider values processed by the "process_slider_value" function.
+    def slider_label_update(self, slider_id, value):
+        if slider_id == "S1":
+                self.difficulty_lbl.configure(text=self.process_slider_value(slider_id, value)[0])
+                self.difficulty_slider.configure(button_color=self.process_slider_value(slider_id, value)[1], 
+                                                 progress_color=self.process_slider_value(slider_id, value)[1], 
+                                                 button_hover_color=self.process_slider_value(slider_id, value)[2])
+        if slider_id == "S2":
+            self.question_amnt_lbl.configure(text=self.process_slider_value(slider_id, value))
 
 
     # Method to insert the chosen option from the autocomplete
@@ -1296,20 +1318,20 @@ class Home:
         # Set up the menu bar.
         home_menubar = Menu(main_window)
 
-        settings_menu = Menu(home_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        settings_menu = Menu(home_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         home_menubar.add_cascade(label="Settings", menu=settings_menu)
-        timer_settings = Menu(home_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        timer_settings = Menu(home_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
-        timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings = Menu(home_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings = Menu(home_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
-        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
-        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, settings_file_path))
+        history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        history_settings.add_radiobutton(label="50", variable=deletion_history_states, value=50, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
 
-        help_menu = Menu(home_menubar, tearoff=0, activebackground=menu_hover, activeforeground=menu_active_fg)
+        help_menu = Menu(home_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         home_menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="Documentation")
         help_menu.add_command(label="About", command=lambda: self.about.setup_about("Home"))
@@ -1317,7 +1339,7 @@ class Home:
         main_window.config(menu=home_menubar)
 
         # Banner creation (left side)
-        lbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+        lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
         lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0), pady=27)
         lbanner = Image.open("AppData/Images/lbanner.png")
         lbanner = ImageTk.PhotoImage(lbanner)
@@ -1326,7 +1348,7 @@ class Home:
         lbanner_canvas.image = lbanner
 
         # Banner creation (right side)
-        rbanner_canvas = Canvas(main_window, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+        rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
         rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20), pady=27)
         rbanner = Image.open("AppData/Images/rbanner.png")
         rbanner = ImageTk.PhotoImage(rbanner)
@@ -1339,7 +1361,7 @@ class Home:
         self.main_content_frame.grid(column=1, row=0, sticky=EW, padx=35, pady=(0,20))
 
         # Logo creation
-        self.logo_canvas = Canvas(self.main_content_frame, bg=main_window_bg, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+        self.logo_canvas = Canvas(self.main_content_frame, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
         self.logo_canvas.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,0))
         self.logo = Image.open("AppData/Images/logo.png")
         self.logo = ImageTk.PhotoImage(self.logo)
@@ -1348,7 +1370,7 @@ class Home:
         self.logo_canvas.image = self.logo
 
         # Set up a content frame to place the main home elements inside.
-        home_frame1 = CTk.CTkFrame(self.main_content_frame, fg_color=frame_fg, corner_radius=10)
+        home_frame1 = CTk.CTkFrame(self.main_content_frame, fg_color=FRAME_FG, corner_radius=10)
         home_frame1.grid(column=0, row=1, sticky=EW, padx=20, pady=(20,5))
 
         # Set width for columns 0-2 (3 total) in home frame 1. Total minimum column width is 410px.
@@ -1357,38 +1379,38 @@ class Home:
         home_frame1.columnconfigure(2, weight=0, minsize=100)
 
         # Create the labels to be placed next to their relevant entry boxes.
-        CTk.CTkLabel(home_frame1, text="Username", font=(default_font, 14, "bold"), text_color=font_colour).grid(column=0, row=0, sticky=E, padx=(0,5), pady=(20,0))
-        CTk.CTkLabel(home_frame1, text="Difficulty", font=(default_font, 14, "bold"), text_color=font_colour).grid(column=0, row=1, sticky=E, padx=(0,5), pady=15)
-        CTk.CTkLabel(home_frame1, text="Questions", font=(default_font, 14, "bold"), text_color=font_colour).grid(column=0, row=2, sticky=E, padx=(0,5), pady=(0,20))
+        CTk.CTkLabel(home_frame1, text="Username", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=0, sticky=E, padx=(0,5), pady=(20,0))
+        CTk.CTkLabel(home_frame1, text="Difficulty", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=E, padx=(0,5), pady=15)
+        CTk.CTkLabel(home_frame1, text="Questions", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=2, sticky=E, padx=(0,5), pady=(0,20))
 
-        self.difficulty_lbl = CTk.CTkLabel(home_frame1, text="", font=(default_font, 12, "bold"), text_color=font_colour)     # Create an empty placeholder label to display the difficulty level.
+        self.difficulty_lbl = CTk.CTkLabel(home_frame1, text="", font=(DEFAULT_FONT, 12, "bold"), text_color=FONT_COLOUR)     # Create an empty placeholder label to display the difficulty level.
         self.difficulty_lbl.grid(column=2, row=1, sticky=W, padx=(5,0), pady=15)
-        self.question_amnt_lbl = CTk.CTkLabel(home_frame1, text="", font=(default_font, 12, "bold"), text_color=font_colour)  # Create an empty placeholder label to display the number of questions.
+        self.question_amnt_lbl = CTk.CTkLabel(home_frame1, text="", font=(DEFAULT_FONT, 12, "bold"), text_color=FONT_COLOUR)  # Create an empty placeholder label to display the number of questions.
         self.question_amnt_lbl.grid(column=2, row=2, sticky=W, padx=(5,0), pady=(0,20))
 
         # Set up the username entry, which is either an entry box if there are no usernames saved, or a combo box if there are usernames saved. This prevents the user from trying to open a combo box dropdown when there are no usernames saved.
         usernames = [user[1] for user in users]
         if usernames == []:  # Check if the usernames list is empty
-            self.username_entry = CTk.CTkEntry(home_frame1, fg_color="#73ace0", border_color="#6aa5db", text_color=font_colour, corner_radius=10)
+            self.username_entry = CTk.CTkEntry(home_frame1, fg_color="#73ace0", border_color="#6aa5db", text_color=FONT_COLOUR, corner_radius=10)
             self.username_entry.insert(0, "")
             self.entry_type = "CTkEntry"
         else:
             # Setup combo box and sliders (scales).
-            self.username_entry = CTk.CTkComboBox(home_frame1, fg_color="#73ace0", border_color="#6aa5db", button_color="#6aa5db", button_hover_color="#5997d5", text_color=font_colour, corner_radius=10)
+            self.username_entry = CTk.CTkComboBox(home_frame1, fg_color="#73ace0", border_color="#6aa5db", button_color="#6aa5db", button_hover_color="#5997d5", text_color=FONT_COLOUR, corner_radius=10)
             self.username_entry.set("")
             self.entry_type = "CTkComboBox"
             # Attach the scrollable dropdown library to the username entry combo box.
-            self.dropdown = CTkScrollableDropdown(self.username_entry, values=[""], justify="left", button_color="transparent", fg_color="#73ace0", bg_color=frame_fg, frame_border_color="#6aa5db", frame_corner_radius=10,
-                                                  scrollbar_button_color="#5997d5", scrollbar_button_hover_color="#497caf", hover_color=menu_hover, text_color=font_colour, autocomplete=True)
+            self.dropdown = CTkScrollableDropdown(self.username_entry, values=[""], justify="left", button_color="transparent", fg_color="#73ace0", bg_color=FRAME_FG, frame_border_color="#6aa5db", frame_corner_radius=10,
+                                                  scrollbar_button_color="#5997d5", scrollbar_button_hover_color="#497caf", hover_color=MENU_HOVER, text_color=FONT_COLOUR, autocomplete=True)
             self.dropdown.configure(values=usernames)  # Set the values of the combo box to the usernames of the users in the users list (user[1])
             # CTkScrollableDropdown library utilises "transient()" to stay on top, so after destroying the combo box (by going to a new page - Scoreboard or Quiz) and creating it again (going back to the Home page), the main window needs to be focused. 
             # If this isn't done, the focus will go back to the dropdown and prevent interaction with the combo box entry section, stopping users from being able to type inside it.
             main_window.focus_force()  # Focus the main window to ensure interaction with the combo box entry section.
         self.username_entry.grid(column=1, row=0, padx=5, pady=(20,0), sticky=EW)
 
-        self.difficulty_slider = CTk.CTkSlider(home_frame1, from_=0, to=2, number_of_steps=2, command=lambda value: self.slider_value_update("S1", value), orientation=HORIZONTAL, fg_color="#73ace0", button_color="#4d97e8")
+        self.difficulty_slider = CTk.CTkSlider(home_frame1, from_=0, to=2, number_of_steps=2, command=lambda value: self.slider_label_update("S1", value), orientation=HORIZONTAL, fg_color="#73ace0", button_color="#4d97e8")
         self.difficulty_slider.grid(column=1, row=1, padx=5, pady=15, sticky=EW)
-        self.questions_slider = CTk.CTkSlider(home_frame1, from_=5, to=35, number_of_steps=30, command=lambda value: self.slider_value_update("S2", value), orientation=HORIZONTAL, progress_color="#4d97e8", fg_color="#73ace0", button_color="#4d97e8", button_hover_color="#3b83c4")
+        self.questions_slider = CTk.CTkSlider(home_frame1, from_=5, to=35, number_of_steps=30, command=lambda value: self.slider_label_update("S2", value), orientation=HORIZONTAL, progress_color="#4d97e8", fg_color="#73ace0", button_color="#4d97e8", button_hover_color="#3b83c4")
         self.questions_slider.grid(column=1, row=2, padx=5, pady=(0,20), sticky=EW)
         
         # Update the value of the entry box and the sliders (scales) with the previously recorded values (used for going from scoreboard back to homepage).
@@ -1403,8 +1425,8 @@ class Home:
             self.questions_slider.set(questions)
 
         # Update the labels next to the sliders with their relevant values.
-        self.slider_value_update("S1", self.difficulty_slider.get())
-        self.slider_value_update("S2", self.questions_slider.get())
+        self.slider_label_update("S1", self.difficulty_slider.get())
+        self.slider_label_update("S2", self.questions_slider.get())
 
         # Create a frame to place the buttons inside.
         button_frame = CTk.CTkFrame(self.main_content_frame, fg_color="transparent")
@@ -1416,9 +1438,9 @@ class Home:
 
         # Create the buttons.
         CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.tools.save_details("Scoreboard", "Home", "Temporary", None),
-                      width=200, height=35, corner_radius=10, fg_color=button_fg, hover_color=button_hover, font=(default_font, 14, "bold"), text_color=font_colour).grid(column=0, row=1, sticky=EW, padx=(0,5))
+                      width=200, height=35, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=EW, padx=(0,5))
         CTk.CTkButton(button_frame, text="Start", command=lambda:self.tools.save_details("Quiz", "Home", "Permanent", None),
-                      width=200, height=35, corner_radius=10, fg_color=button_fg, hover_color=button_hover, font=(default_font, 14, "bold"), text_color=font_colour).grid(column=1, row=1, sticky=EW, padx=(5,0))
+                      width=200, height=35, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=1, row=1, sticky=EW, padx=(5,0))
         
         if deiconify_reqd == True:   # Check if deiconify is required, which is True when the main window is first created on program start. 
             main_window.deiconify()  # Show the main window after all elements are created to prevent flickering of the window before the UI is set up.
@@ -1428,13 +1450,16 @@ class Home:
 
 # Main function for starting the program.
 def main(): 
-    global operating_system, main_window, deiconify_reqd, main_window_bg, frame_fg, button_fg, button_hover, button_clicked, menu_active_fg, menu_hover, font_colour, default_font  # Global variables for the operating system and window UI elements/design.
-    global full_directory, full_pdf_directory, pdf_file_path, scoreboard_file_path, settings_file_path  # Global variables for the file paths of the general directories, JSON files, and the PDF scoreboard file.
+    global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
+    global full_directory, full_pdf_directory, PDF_FILE_PATH, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
     global users, quiz_paused, username, difficulty_num, questions, settings, default_settings, timer, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
 
     # Get the operating system name to manage functionalities in the program with limited support for multiple operating systems.
     # When run on Linux, this will return "Linux". On macOS, this will return "Darwin". On Windows, this will return "Windows".
     operating_system = platform.system()
+
+    # Set the version number of the program.
+    APP_VERSION = "2.6.0"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
@@ -1445,23 +1470,26 @@ def main():
     if os.path.exists("AppData/Images/icon.png"):   # Check if the icon file exists before setting it.
         main_window.iconphoto(False, PhotoImage(file="AppData/Images/icon.png"))  # Set the title bar icon.
     main_window.resizable(False, False)         # Set the resizable property for height and width to False.
-    main_window_bg = "#d0ebfc"                  # Set the background colour to be used for the main window.
-    frame_fg = "#87bcf4"                        # Set the foreground colour to be used for all frames.
-    button_fg = "#5ba2ef"                       # Set the foreground colour to be used for all buttons.
-    button_hover = "#4c93e3"                    # Set the hover colour to be used for all buttons.
-    button_clicked = "#4989d8"                  # Set the clicked colour to be used for all buttons.
-    menu_active_fg = "#FFFFFF"                  # Set the foreground colour to be used for active menu items.
-    menu_hover = "#a3cbf5"                      # Set the hover colour to be used for all menu items.
-    font_colour = "#FFFFFF"                     # Set the font colour to be used for all CTk elements.
-    default_font = "Segoe UI"                   # Set the default font to be used for all CTk elements.
-    main_window.configure(bg=main_window_bg)    # Configure the main window to use the background colour (value) of the "main_window_bg variable".
+    
+    # Colour hex code for UI elements
+    MAIN_WINDOW_BG = "#d0ebfc"                  # Set the background colour to be used for the main window.
+    FRAME_FG = "#87bcf4"                        # Set the foreground colour to be used for all frames.
+    BUTTON_FG = "#5ba2ef"                       # Set the foreground colour to be used for all buttons.
+    BUTTON_HOVER = "#4c93e3"                    # Set the hover colour to be used for all buttons.
+    BUTTON_CLICKED = "#4989d8"                  # Set the clicked colour to be used for all buttons.
+    MENU_ACTIVE_FG = "#FFFFFF"                  # Set the foreground colour to be used for active menu items.
+    MENU_HOVER = "#a3cbf5"                      # Set the hover colour to be used for all menu items.
+    FONT_COLOUR = "#FFFFFF"                     # Set the font colour to be used for all CTk elements.
+    
+    # Default program font
+    DEFAULT_FONT = "Segoe UI"                   # Set the default font to be used for all CTk elements.
 
-    # Setup the directories for saving and loading data.
+    # Setup the directories and paths for saving and loading data.
     full_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"  # Get the absolute intended path of the JSON files for debugging purposes when errors and warnings occur, storing it in "full_directory".
     full_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"      # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "full_pdf_directory".
-    pdf_file_path = "QWhizz Math Scoreboard.pdf"      # Set the file path for the scoreboard PDF file.
-    scoreboard_file_path = "AppData/scoreboard.json"  # Set the file path for the scoreboard JSON file.
-    settings_file_path = "AppData/settings.json"      # Set the file path for the settings JSON file.
+    PDF_FILE_PATH = "QWhizz Math Scoreboard.pdf"      # Set the file path for the scoreboard PDF file.
+    SCOREBOARD_FILE_PATH = "AppData/scoreboard.json"  # Set the file path for the scoreboard JSON file.
+    SETTINGS_FILE_PATH = "AppData/settings.json"      # Set the file path for the settings JSON file.
 
     # Initialise global lists and variables.
     users = []                              # Create empty list for user details and their quiz results to be stored inside.
@@ -1493,20 +1521,25 @@ def main():
     tools.completion = completion_page              # Link the "completion_page" instance to the "tools" instance to allow access to "Completion" class attributes and methods from within the "Tools" class.
     tools.quiz = quiz_page                          # Link the "quiz_page" instance to the "tools" instance to allow access to "Quiz" class attributes and methods from within the "Tools" class.
     tools.home = home_page                          # Link the "home_page" instance to the "tools" instance to allow access to "Home" class attributes and methods from within the "Tools" class.
+    
     about_window.scoreboard = scoreboard_page       # Link the "scoreboard_page" instance to the "about_window" instance to allow access to "Scoreboard" class attributes and methods from within the "About" class.
     about_window.completion = completion_page       # Link the "completion_page" instance to the "about_window" instance to allow access to "Completion" class attributes and methods from within the "About" class.
     about_window.quiz = quiz_page                   # Link the "quiz_page" instance to the "about_window" instance to allow access to "Quiz" class attributes and methods from within the "About" class.
     about_window.home = home_page                   # Link the "home_page" instance to the "about_window" instance to allow access to "Home" class attributes and methods from within the "About" class.
+    
     scoreboard_page.completion = completion_page    # Link the "completion_page" instance to the "scoreboard_page" instance to allow access to "Completion" class attributes and methods from within the "Scoreboard" class.
     scoreboard_page.quiz = quiz_page                # Link the "quiz_page" instance to the "scoreboard_page" instance to allow access to "Quiz" class attributes and methods from within the "Scoreboard" class.
     scoreboard_page.home = home_page                # Link the "home_page" instance to the "scoreboard_page" instance to allow access to "Home" class attributes and methods from within the "Scoreboard" class.
+    
     completion_page.quiz = quiz_page                # Link the "quiz_page" instance to the "completion_page" instance to allow access to "Quiz" class attributes and methods from within the "Completion" class.
     completion_page.home = home_page                # Link the "home_page" instance to the "completion_page" instance to allow access to "Home" class attributes and methods from within the "Completion" class.
+    
     quiz_page.home = home_page                      # Link the "home_page" instance to the "quiz_page" instance to allow access to "Home" class attributes and methods from within the "Quiz" class.
 
     # Load the data from the JSON files and start the home page.
-    tools.load_details("scoreboard", scoreboard_file_path, "users")     # Load the user scores from the scoreboard.json file.
-    tools.load_details("settings", settings_file_path, "settings")      # Load the settings from the settings.json file.
+    tools.load_details("scoreboard", SCOREBOARD_FILE_PATH, "users")     # Load the user scores from the scoreboard.json file.
+    tools.load_details("settings", SETTINGS_FILE_PATH, "settings")      # Load the settings from the settings.json file.
+    main_window.configure(bg=MAIN_WINDOW_BG)                            # Configure the main window to use the background colour (value) of the "MAIN_WINDOW_BG variable".
     home_page.setup_homepage()                                          # Call the "setup_homepage" method from the "home_page" class instance to set up the home page UI elements.
 
     # Start the CTkinter event loop so that the GUI window stays open.
