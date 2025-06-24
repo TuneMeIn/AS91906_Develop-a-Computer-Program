@@ -17,6 +17,7 @@
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import filedialog
 import customtkinter as CTk
 from AppData.CTkScrollableDropdown import *
 from PIL import Image, ImageTk
@@ -367,7 +368,7 @@ class Tools:
                 if response1 == False:
                     return
             else:
-                # Load all data from JSON file
+                # Load all data from JSON file.
                 with open("AppData\scoreboard.json", "r") as file:
                     data = json.load(file)  # Load the details from the JSON file into the "data" list.
         else:
@@ -382,46 +383,53 @@ class Tools:
         self.scoreboard.tree.selection_set("")  # Clear the current selection in the Treeview widget.
         self.reset_details("Scoreboard")  # Reset the "sel_reference_numbers" list in the Scoreboard class so that the list is ready for new selections.
         
-        # Initialise PDF
+        # Initialise PDF.
         pdf = PDF()
-        pdf.alias_nb_pages()  # Enable total page count placeholder
-        pdf.add_page()        # Start with first page
+        pdf.alias_nb_pages()  # Enable total page count placeholder.
+        pdf.add_page()        # Start with first page.
 
-        # Define table headings
+        # Define table headings.
         headings = ["Ref #", "Username", "Difficulty", "Questions", "Time", "Score"]
 
-        # Generate the table on the PDF
+        # Generate the table on the PDF.
         pdf.scoreboard_table(data, headings)
 
         try:
-            # Save the PDF to file
-            pdf.output(PDF_FILE_PATH)
-            if selections == "all":
-                messagebox.showinfo("Print Successful", f"The scoreboard has been successfully printed to 'QWhizz Math Scoreboard.pdf'.\n\n{full_pdf_directory}/QWhizz Math Scoreboard.pdf")
+            # Ask the user where they would like to save the PDF file.
+            file_path = filedialog.asksaveasfilename(defaultextension=".pdf", initialdir=initial_pdf_directory, initialfile=INITIAL_PDF_NAME, filetypes=[("PDF files", "*.pdf")], title="Save Scoreboard As")
+            saved_file_name = os.path.basename(file_path)  # Get the name of the saved file using "os.path.basename", which would be any characters after the last slash (/) in the file path.
+
+            # If the user chose a location, save the PDF to that location.
+            if file_path:
+                pdf.output(file_path)  # Save the PDF to the specified file path.
+                words = "scoreboard has" if selections == "all" else "selected score has" if len(selections) == 1 else "selected scores have"  # Determine whether to use "scoreboard has", "selected score has", or "selected scores have" in the message box based on the number of selected items.
+                messagebox.showinfo("Print Successful", f"The {words} been successfully printed to '{saved_file_name}'.\n\n{file_path}")
+            
+                # Ask the user if they want to print the PDF.
+                response2 = messagebox.askyesno("Send PDF to Printer", "Would you like to send the PDF to a printer now?")
+                # If the user chooses to send the PDF to a printer, proceed with printing.
+                if response2 == True:
+                    try:
+                        if operating_system == "Windows":                  # Check if the operating system is Windows.
+                            os.startfile(file_path, "print")               # Send the PDF file to the default printer.
+                        elif operating_system == "Linux":                  # Check if the operating system is Linux.
+                            subprocess.run(["lp", file_path], check=True)  # Use the "lp" command to send the PDF file to the default printer.
+                        elif operating_system == "Darwin":                 # Check if the operating system is macOS.
+                            subprocess.run(["lp", file_path], check=True)  # Use the "lp" command to send the PDF file to the default printer.
+                        else:
+                            messagebox.showwarning("Unsupported OS", f"Your operating system ({operating_system}) is not supported for printing. Please print the PDF file manually.\n\n{file_path}")  # Show a warning message if the operating system is not supported for printing.
+                    except Exception as e:
+                        messagebox.showerror("Printing Error", f"An error occurred while printing the PDF file.\n\n{e}\n\n{file_path}")  # Show an error message if there is an error while printing the PDF file.
             else:
-                messagebox.showinfo("Print Successful", f"The selected scores have been successfully printed to 'QWhizz Math Scoreboard.pdf'.\n\n{full_pdf_directory}/QWhizz Math Scoreboard.pdf")
-            response2 = messagebox.askyesno("Send PDF to Printer", "Would you like to send the PDF to a printer now?")  # Ask the user if they want to print the PDF.
-            # If the user chooses to send the PDF to a printer, proceed with printing.
-            if response2 == True:
-                try:
-                    if operating_system == "Windows":   # Check if the operating system is Windows.
-                        os.startfile(PDF_FILE_PATH, "print")  # Send the PDF file to the default printer.
-                    elif operating_system == "Linux":   # Check if the operating system is Linux.
-                        subprocess.run(["lp", PDF_FILE_PATH], check=True)  # Use the "lp" command to send the PDF file to the default printer.
-                    elif operating_system == "Darwin":  # Check if the operating system is macOS.
-                        subprocess.run(["lp", PDF_FILE_PATH], check=True)  # Use the "lp" command to send the PDF file to the default printer.
-                    else:
-                        messagebox.showwarning("Unsupported OS", f"Your operating system ({operating_system}) is not supported for printing. Please print the PDF manually.\n\n{full_pdf_directory}")  # Show a warning message if the operating system is not supported for printing.
-                except Exception as e:
-                    messagebox.showerror("Printing Error", f"An error occurred while printing the PDF file.\n\n{e}\n\n{full_pdf_directory}")
+                return
         
         # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
         except IOError as io_error:
-            messagebox.showerror("File Error", f"Failed to write to 'QWhizz Math Scoreboard.pdf'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{full_pdf_directory}")  # Show an error message if the file cannot be written to.
+            messagebox.showerror("File Error", f"Failed to write to 'QWhizz Math Scoreboard.pdf'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{file_path}")  # Show an error message if the file cannot be written to.
         
         # Error control for any other exceptions that may occur.
         except Exception as e:
-            messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'QWhizz Math Scoreboard.pdf'.\n\n{e}\n\n{full_pdf_directory}")  # Show an error message if there is an unexpected error.
+            messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'QWhizz Math Scoreboard.pdf'.\n\n{e}\n\n{file_path}")  # Show an error message if there is an unexpected error.
 
 
     # Method for deleting details from the "users" list.
@@ -683,7 +691,7 @@ class Scoreboard:
         timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings = Menu(scoreboard_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
-        settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
+        settings_menu.add_cascade(menu=history_settings, label="Score Deletion History States")
         history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
@@ -869,7 +877,7 @@ class Completion:
         timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH), value=True)
         timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH), value=False)
         history_settings = Menu(completion_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
-        settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
+        settings_menu.add_cascade(menu=history_settings, label="Score Deletion History States")
         history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
@@ -975,6 +983,18 @@ class Quiz:
         self.score = 0                          # Variable to store the active score during the quiz, defaulting to 0.
 
 
+    def exit_quiz(self, command, origin):
+        if origin == "Quiz" and command == "Home":
+            paused_prior = quiz_paused  # Check if the quiz has been paused prior to pressing the exit button, meaning it shouldn't be paused twice and then unpaused.
+            if paused_prior == False: self.pause_quiz()
+            response1 = messagebox.askyesno("Exit Quiz", "Are you sure you want to exit the quiz?\nAll progress will be lost.", icon="warning")
+            if response1 == True:
+                self.stop_timer(command, origin)
+            else:
+                if paused_prior == False: self.unpause_quiz()
+                return
+        
+
     def start_timer(self):
         self.timer_active = True
         # Only set the quiz start time on the first run of the timer loop (not after unpausing)
@@ -989,7 +1009,7 @@ class Quiz:
         if hasattr(self, "timer_job") and self.timer_job != None:
             self.timer_lbl.after_cancel(self.timer_job)
             self.timer_job = None
-        
+
         if origin == "Quiz":
             self.tools.unbind_keys(self.binded_keys)
 
@@ -1119,7 +1139,7 @@ class Quiz:
         quiz_menubar.add_cascade(label="Quiz", menu=quiz_menu)
         quiz_menu.add_command(label="Restart Quiz", accelerator="Ctrl+R")
         quiz_menu.add_command(label="New Quiz", accelerator="Ctrl+N", command=lambda: self.stop_timer("Quiz", "Quiz"))
-        quiz_menu.add_command(label="Exit Quiz", accelerator="Esc", command=lambda: self.stop_timer("Home", "Quiz"))
+        quiz_menu.add_command(label="Exit Quiz", accelerator="Esc", command=lambda: self.exit_quiz("Home", "Quiz"))
 
         settings_menu = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         quiz_menubar.add_cascade(label="Settings", menu=settings_menu)
@@ -1128,7 +1148,7 @@ class Quiz:
         timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.timer_config("Quiz Menubar", "Enable", self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH)), value=True)        # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
         timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.timer_config("Quiz Menubar", "Disable", self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH)), value=False)     # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
         history_settings = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
-        settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
+        settings_menu.add_cascade(menu=history_settings, label="Score Deletion History States")
         history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
@@ -1143,7 +1163,7 @@ class Quiz:
 
         # Bind key shortcuts to perform actions.
         main_window.bind("<Control-n>", lambda e: self.stop_timer("Quiz", "Quiz"))  # Bind Ctrl+N to start a new quiz.
-        main_window.bind("<Escape>", lambda e: self.stop_timer("Home", "Quiz"))     # Bind Escape to exit the quiz and return to the home page.
+        main_window.bind("<Escape>", lambda e: self.exit_quiz("Home", "Quiz"))      # Bind Escape to exit the quiz and return to the home page.
         self.binded_keys = ["<Control-n>", "<Escape>"]                              # Create a list of binded keys to be used later for unbinding them when the user goes to a different page.
 
         # Banner creation (left side)
@@ -1325,7 +1345,7 @@ class Home:
         timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings = Menu(home_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
-        settings_menu.add_cascade(menu=history_settings, label="Deletion History States")
+        settings_menu.add_cascade(menu=history_settings, label="Score Deletion History States")
         history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings.add_radiobutton(label="10", variable=deletion_history_states, value=10, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings.add_radiobutton(label="25", variable=deletion_history_states, value=25, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
@@ -1451,7 +1471,7 @@ class Home:
 # Main function for starting the program.
 def main(): 
     global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
-    global full_directory, full_pdf_directory, PDF_FILE_PATH, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
+    global full_directory, initial_pdf_directory, INITIAL_PDF_NAME, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
     global users, quiz_paused, username, difficulty_num, questions, settings, default_settings, timer, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
 
     # Get the operating system name to manage functionalities in the program with limited support for multiple operating systems.
@@ -1459,7 +1479,7 @@ def main():
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "2.6.0"
+    APP_VERSION = "2.7.0"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
@@ -1486,8 +1506,8 @@ def main():
 
     # Setup the directories and paths for saving and loading data.
     full_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"  # Get the absolute intended path of the JSON files for debugging purposes when errors and warnings occur, storing it in "full_directory".
-    full_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"      # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "full_pdf_directory".
-    PDF_FILE_PATH = "QWhizz Math Scoreboard.pdf"      # Set the file path for the scoreboard PDF file.
+    initial_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"      # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "initial_pdf_directory".
+    INITIAL_PDF_NAME = "QWhizz Math Scoreboard.pdf"      # Set the file path for the scoreboard PDF file.
     SCOREBOARD_FILE_PATH = "AppData/scoreboard.json"  # Set the file path for the scoreboard JSON file.
     SETTINGS_FILE_PATH = "AppData/settings.json"      # Set the file path for the settings JSON file.
 
