@@ -21,4 +21,4 @@ This project is a GUI application for Flow Computing to help students with their
 * __Ver 2.7.0 - 24/06/2025 - Minor Functionality Update:__ This version includes more minor changes, alongside a new way to save a scoreboard PDF file, which provides the user with an OS-default system of saving files to their preferred directory through apps such as Explorer on Windows, rather than the program simply saving the file to the program's root directory.
 
 ### Version 3
-* __Ver 3.0.0 - 28/06/2025__ - Initial release of version 3 for the QWhizz Math program. This release contains the first preview of question generation, with the easy difficulty question generation functionality being half complete. It currently contains one step algebra equations, and is yet to include area of triangle questions.
+* __Ver 3.0.0 - 28/06/2025__ - Initial release of version 3 for the QWhizz Math program. This release contains question generation, with the easy difficulty question generation functionality being half complete. It currently contains one step algebra equations, and is yet to include area of triangle questions.
