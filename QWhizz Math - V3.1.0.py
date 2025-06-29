@@ -25,7 +25,7 @@ from fpdf import FPDF
 from fpdf.enums import TableCellFillMode
 from fpdf.fonts import FontFace
 from datetime import datetime
-import json, time, random, os, platform, subprocess, string
+import json, time, random, os, platform, subprocess, string, math
 
 class PDF(FPDF):
     def __init__(self):
@@ -523,9 +523,9 @@ class Tools:
             return  # If the redo stack is empty, do nothing and return.
         
         last_redo = redo_stack.pop()  # Retrieve the last deleted users from the redo stack.
-        history_stack.append([(user, index) for user, index in last_redo])    # Store the last deleted users in the history stack for potential future undoing.
+        history_stack.append([(user, index) for user, index in last_redo])       # Store the last deleted users in the history stack for potential future undoing.
         # Delete users in reverse index order to avoid shifting issues.
-        for i, index in sorted(last_redo, key=lambda x: x[1], reverse=True):  # Sort by the original index ("x[1]"), which refers to the second element ("1", being the index) in each (user, index) tuple, representing the user's original position.
+        for user, index in sorted(last_redo, key=lambda x: x[1], reverse=True):  # Sort by the original index ("x[1]"), which refers to the second element ("1", being the index) in each (user, index) tuple, representing the user's original position.
             del users[index]  # Delete the user from the "users" list at the specified index.
         
         self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
@@ -1166,46 +1166,43 @@ class Quiz:
     
 
     def medium_mode(self):
-        return
-    
-
-    def easy_mode(self):
         global question_details, fake_answers
         #question_topic = random.randint(0, 1)
         question_topic = 1  # For testing, use just the one step equation algebra question type.
         if question_topic == 0:  # If the random number is 0, then the question topic is triangle area.
             return
         elif question_topic == 1:  # If the random number is 1, then the question topic is one step equation algebra.
+            letters = ['x', 'y', 'z', 'a', 'b', 'c', 'm', 'n']
+            
             for i in range(question_amount):
-                letters = ['x', 'y', 'z', 'a', 'b', 'c', 'm', 'n']
-                letter1 = random.choice(letters)
+                letter = random.choice(letters)
                 question_title = "One Step Equations"
-                question_statement = f"Solve for {letter1}:"
+                question_statement = f"Solve for {letter}:"
                 
                 question_type = random.randint(0, 3)
                 if question_type == 0:
-                    # e.g. a - 2 = 4 >> a = 6
+                    # e.g. a - 2 = 4 >> a = 6.
                     number1 = random.randint(1, 20)
                     number2 = random.randint(1, 50)
-                    question = f"{letter1} - {number1} = {number2}"
+                    question = f"{letter} - {number1} = {number2}"
                     answer = number2+number1
                 elif question_type == 1:
-                    # e.g. a + 2 = 4 >> a = 2
+                    # e.g. a + 2 = 4 >> a = 2.
                     number1 = random.randint(1, 20)
                     number2 = random.randint(1, 50)
-                    question = f"{letter1} + {number1} = {number2}"
+                    question = f"{letter} + {number1} = {number2}"
                     answer = number2-number1
                 elif question_type == 2:
-                    # e.g. 2a = 4 >> a = 2
+                    # e.g. 2a = 4 >> a = 2.
                     number1 = random.randint(1, 10)
-                    number2 = random.randint(number1, number1+10)  # Ensure that the second number is greater than the first number, by making the minimum value as "number1" and the maximum value as "number1" + 50.
-                    question = f"{number1}{letter1} = {number2}"
+                    number2 = random.randint(number1, number1+10)  # Ensure that the second number is greater than the first number, by making the minimum value as "number1" and the maximum value as "number1" + 10.
+                    question = f"{number1}{letter} = {number2}"
                     answer = number2/number1
                 elif question_type == 3:
-                    # e.g. a / 2 = 4 >> a = 8
+                    # e.g. a / 2 = 4 >> a = 8.
                     number1 = random.randint(1, 12)
                     number2 = random.randint(1, 12)
-                    question = f"{letter1} / {number1} = {number2}"
+                    question = f"{letter} / {number1} = {number2}"
                     answer = number2*number1
 
                 formatted_answer = str(int(answer)) if answer == int(answer) else "{:.2f}".format(answer)  # Format the answer to 2 decimal places if it is a float (decimal number).
@@ -1223,6 +1220,64 @@ class Quiz:
         return
 
 
+    def easy_mode(self):
+        global question_details, fake_answers
+        #question_topic = random.randint(0, 1)
+        question_topic = 1  # For testing, use just the one step equation algebra question type.
+        if question_topic == 0:  # If the random number is 0, then the question topic is triangle area.
+            return
+        elif question_topic == 1:  # If the random number is 1, then the question topic is simplying like terms.
+            letters = ["x", "y", "z", "a", "b", "c", "m", "n"]
+            
+            for i in range(question_amount):
+                letter = random.choice(letters)
+                question_title = "Like Terms"
+                question_statement = f"Simplify the following:"
+                
+                question_type = random.randint(0, 1)
+                if question_type == 0:
+                    # e.g. 2x - 4x - 6x = -8x.
+                    number1 = random.randint(1, 12)
+                    number2 = random.randint(1, 12)
+                    number3 = random.randint(1, 12)
+                    question = f"{number1 if number1 != 1 else ''}{letter} - {number2 if number2 != 1 else ''}{letter} - {number3 if number3 != 1 else ''}{letter} = ?"
+                    answer = number1-number2-number3
+                elif question_type == 1:
+                    # e.g. 2x + 4x + 6x = 12x.
+                    number1 = random.randint(1, 12)
+                    number2 = random.randint(1, 12)
+                    number3 = random.randint(1, 12)
+                    question = f"{number1 if number1 != 1 else ''}{letter} + {number2 if number2 != 1 else ''}{letter} + {number3 if number3 != 1 else ''}{letter} = ?"
+                    answer = number1+number2+number3
+
+                # For instances where the answer is 1 or -1, use just the letter as the answer (this follows algebra rules where "1x" is the same as "x" and "-1x" is the same as "-x").
+                if answer == 1:
+                    formatted_answer = f"{letter}"
+                elif answer == -1:
+                    formatted_answer = f"-{letter}"
+                else:
+                    formatted_answer = f"{answer}{letter}"
+
+                fake_answers = []
+                while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
+                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between -2 or 2 and -20 or 20.
+                    distractor = answer + offset
+                    if distractor == 1:
+                        formatted_fake = f"{letter}"
+                    elif distractor == -1:
+                        formatted_fake = f"-{letter}"
+                    elif distractor == 0:  # If the distractor is 0, then don't include the letter.
+                        formatted_fake = f"{distractor}"
+                    else:
+                        formatted_fake = f"{distractor}{letter}"
+                    if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
+                        fake_answers.append(formatted_fake)  # Append each formatted fake answer to the fake answers list.
+
+                # Append the question details to the question_details list.
+                question_details.append([question_title, question_statement, question, formatted_answer, fake_answers])
+        return
+
+
     # Procedure for setting up the UI elements consisting of images, labels, entry boxes, sliders (scales), and buttons.
     def setup_quiz(self):
         global quiz_paused
@@ -1232,9 +1287,9 @@ class Quiz:
         if difficulty == "Easy":
             self.easy_mode()
         elif difficulty == "Medium":
-            self.easy_mode()  # Use easy mode till medium mode is implemented
+            self.hard_mode()  # Use hard mode for testing efficiency.
         elif difficulty == "Hard":
-            self.easy_mode()  # Use easy mode till hard mode is implemented
+            self.hard_mode()
 
         # Set width for columns 0-1 (2 total) in the main window. Positive weight means the column will expand to fill the available space.
         main_window.columnconfigure(0, weight=1, minsize=0)
@@ -1592,7 +1647,7 @@ def main():
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "3.0.0"
+    APP_VERSION = "3.1.0"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
