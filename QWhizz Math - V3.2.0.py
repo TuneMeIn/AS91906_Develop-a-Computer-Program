@@ -1022,6 +1022,12 @@ class Quiz:
             self.timer_job = None
 
         if origin == "Quiz":
+            if command == "Restart Quiz":
+                response1 = messagebox.askyesno("Restart Quiz", "Are you sure you want to restart the quiz?\nAll progress will be lost.", icon="warning")
+                if response1 == False: return
+            if command == "New Quiz":
+                response1 = messagebox.askyesno("New Quiz", "Are you sure you want to start a new quiz?\nAll progress will be lost.", icon="warning")
+                if response1 == False: return
             self.tools.unbind_keys(self.binded_keys)
 
         if command == "Home" or command == "Restart Quiz" or command == "New Quiz":
@@ -1162,6 +1168,51 @@ class Quiz:
 
 
     def hard_mode(self):
+        global question_details, fake_answers
+        #question_topic = random.randint(0, 1)
+        question_topic = 1  # For testing, use just the one step equation algebra question type.
+        if question_topic == 0:  # If the random number is 0, then the question topic is triangle area.
+            return
+        elif question_topic == 1:  # If the random number is 1, then the question topic is binomial expansion.
+            letters = ["x", "y", "z", "a", "b", "c", "m", "n"]
+            
+            for i in range(question_amount):
+                question_title = "Binomial Expansion"
+                question_statement = f"Expand the following:"
+                
+                # e.g. (x - 3)(x + 2) = ?
+                letter = random.choice(letters)
+                number1 = random.choice([-1, 1]) * random.randint(1, 12)  # Generate a random number between 1 and 12, then multiply it by -1 or 1 to create a random number between -12 and 12.
+                number2 = random.choice([-1, 1]) * random.randint(1, 12)  # Generate a random number between 1 and 12, then multiply it by -1 or 1 to create a random number between -12 and 12.
+                # Create the question, using if statements to ensure that the number will have an addition sign if it isn't negative, or will have a negative sign if it is negative. ".removeprefix('-')" removes the original negative sign from the number if it is negative, so that a negative sign with spaces can be used instead.
+                question = f"({letter}{' + ' if not str(number1).startswith('-') else ' - '}{str(number1).removeprefix('-') if str(number1).startswith('-') else number1})({letter}{' + ' if not str(number2).startswith('-') else ' - '}{str(number2).removeprefix('-') if str(number2).startswith('-') else number2}) = ?"
+                
+                section1 = f"{letter}\u00b2"  # Square the letter using the Unicode character for superscript 2 (\u00b2).
+                section2 = number2 + number1  # Combine the like terms, e.g. 2x + 3x = 5x.
+                section3 = number1 * number2  # Multiply the last terms, e.g. 2 * 3 = 6.
+
+                # If section 2 is 0, make "formatted_section2" an empty string. If it's -1, use just a negative letter for "formatted_section2". If it's 1, use just a positive letter for "formatted_section2". If it's not 0 or -1 or 1, use a positive sign with section 2 and the letter for "formatted_section2". Finally, if section 2 is negative, use a negative sign with section 2 and the letter for "formatted_section2".
+                formatted_section2 = f"" if section2 == 0 else f" - {letter}" if section2 == -1 else f" + {letter}" if section2 == 1 else f" + {section2}{letter}" if not str(section2).startswith("-") else f" - {str(section2).removeprefix('-')}{letter}"  # If section 2 is 1 or -1, use just the letter as the answer (this follows algebra rules where "1x" is the same as "x" and "-1x" is the same as "-x").
+                formatted_section3 = f" + {section3}" if not str(section3).startswith("-") else f" - {str(section3).removeprefix('-')}"  # If section 3 isn't negative, use a positive sign with section 3 for "formatted_section3". If section 3 is negative, use a negative sign with section 3 for "formatted_section3".
+                answer = f"{section1}{formatted_section2}{formatted_section3}"  # Combine the sections to create the answer.
+
+                fake_answers = []
+                while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
+                    offset1 = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between 2 and 10, then multiply it by -1 or 1 to create a random number between -10 and 10.
+                    offset2 = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between 2 and 10, then multiply it by -1 or 1 to create a random number between -10 and 10.
+                    fake1 = section2 + offset1  # Add the offset to section 2 to create a fake answer.
+                    fake2 = section3 + offset2  # Add the offset to section 3 to create a fake answer.
+                    
+                    # If fake 1 is 0, make "formatted_fake1" an empty string. If it's -1, use just a negative letter for "formatted_fake1". If it's 1, use just a positive letter for "formatted_fake1". If it's not 0 or -1 or 1, use a positive sign with fake 1 and the letter for "formatted_fake1". Finally, if fake 1 is negative, use a negative sign with fake 1 and the letter for "formatted_fake1".
+                    formatted_fake1 = f"" if fake1 == 0 else f" - {letter}" if fake1 == -1 else f" + {letter}" if fake1 == 1 else f" + {fake1}{letter}" if not str(fake1).startswith("-") else f" - {str(fake1).removeprefix('-')}{letter}"
+                    formatted_fake2 = f"" if fake2 == 0 else f" + {fake2}" if not str(fake2).startswith("-") else f" - {str(fake2).removeprefix('-')}"
+                    complete_fake = f"{section1}{formatted_fake1}{formatted_fake2}"
+
+                    if complete_fake != answer and complete_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
+                        fake_answers.append(complete_fake)  # Append each formatted fake answer to the fake answers list.
+
+                # Append the question details to the question_details list.
+                question_details.append([question_title, question_statement, question, answer, fake_answers])
         return
     
 
@@ -1209,9 +1260,9 @@ class Quiz:
 
                 fake_answers = []
                 while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
-                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between -2 or 2 and -20 or 20.
-                    distractor = answer + offset
-                    formatted_fake = str(int(distractor)) if distractor == int(distractor) else "{:.2f}".format(distractor)  # Format the answer to 2 decimal places if it is a float (decimal number).
+                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between -2 or 2 and -10 or 10.
+                    fake = answer + offset
+                    formatted_fake = str(int(fake)) if fake == int(fake) else "{:.2f}".format(fake)  # Format the answer to 2 decimal places if it is a float (decimal number).
                     if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
                         fake_answers.append(formatted_fake)  # Append each formatted fake answer to the fake answers list.
 
@@ -1236,18 +1287,18 @@ class Quiz:
                 
                 question_type = random.randint(0, 1)
                 if question_type == 0:
-                    # e.g. 2x - 4x - 6x = -8x.
+                    # e.g. 2x - 4x - 6x = ?.
                     number1 = random.randint(1, 12)
                     number2 = random.randint(1, 12)
                     number3 = random.randint(1, 12)
-                    question = f"{number1 if number1 != 1 else ''}{letter} - {number2 if number2 != 1 else ''}{letter} - {number3 if number3 != 1 else ''}{letter} = ?"
+                    question = f"{number1 if number1 != 1 else ''}{letter} - {number2 if number2 != 1 else ''}{letter} - {number3 if number3 != 1 else ''}{letter} = ?"  # If any numbers are 1 then only include the letter beside those numbers.
                     answer = number1-number2-number3
                 elif question_type == 1:
-                    # e.g. 2x + 4x + 6x = 12x.
+                    # e.g. 2x + 4x + 6x = ?.
                     number1 = random.randint(1, 12)
                     number2 = random.randint(1, 12)
                     number3 = random.randint(1, 12)
-                    question = f"{number1 if number1 != 1 else ''}{letter} + {number2 if number2 != 1 else ''}{letter} + {number3 if number3 != 1 else ''}{letter} = ?"
+                    question = f"{number1 if number1 != 1 else ''}{letter} + {number2 if number2 != 1 else ''}{letter} + {number3 if number3 != 1 else ''}{letter} = ?"  # If any numbers are 1 then only include the letter beside those numbers.
                     answer = number1+number2+number3
 
                 # For instances where the answer is 1 or -1, use just the letter as the answer (this follows algebra rules where "1x" is the same as "x" and "-1x" is the same as "-x").
@@ -1260,16 +1311,16 @@ class Quiz:
 
                 fake_answers = []
                 while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
-                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between -2 or 2 and -20 or 20.
-                    distractor = answer + offset
-                    if distractor == 1:
+                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between -2 or 2 and -10 or 10.
+                    fake = answer + offset
+                    if fake == 1:
                         formatted_fake = f"{letter}"
-                    elif distractor == -1:
+                    elif fake == -1:
                         formatted_fake = f"-{letter}"
-                    elif distractor == 0:  # If the distractor is 0, then don't include the letter.
-                        formatted_fake = f"{distractor}"
+                    elif fake == 0:  # If the distractor is 0, then don't include the letter.
+                        formatted_fake = f"{fake}"
                     else:
-                        formatted_fake = f"{distractor}{letter}"
+                        formatted_fake = f"{fake}{letter}"
                     if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
                         fake_answers.append(formatted_fake)  # Append each formatted fake answer to the fake answers list.
 
@@ -1287,7 +1338,7 @@ class Quiz:
         if difficulty == "Easy":
             self.easy_mode()
         elif difficulty == "Medium":
-            self.hard_mode()  # Use hard mode for testing efficiency.
+            self.medium_mode()
         elif difficulty == "Hard":
             self.hard_mode()
 
@@ -1647,7 +1698,7 @@ def main():
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "3.1.0"
+    APP_VERSION = "3.2.0"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
