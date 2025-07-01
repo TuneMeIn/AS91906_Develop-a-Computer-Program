@@ -15,17 +15,15 @@
 # Once these packages are installed, the program is ready to use.
 
 from tkinter import *
-from tkinter import ttk
-from tkinter import messagebox
-from tkinter import filedialog
+from tkinter import ttk, messagebox, filedialog, font
 import customtkinter as CTk
 from AppData.CTkScrollableDropdown import *
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
 from fpdf import FPDF
 from fpdf.enums import TableCellFillMode
 from fpdf.fonts import FontFace
 from datetime import datetime
-import json, time, random, os, platform, subprocess, string, math
+import json, time, random, os, platform, subprocess, math
 
 class PDF(FPDF):
     def __init__(self):
@@ -108,8 +106,6 @@ class Tools:
 
     # Method for clearing all widgets or clearing specified widgets (column, row).
     def clear_widget(self, procedure, all_widgets, column, row, command):
-        global username, difficulty_num, question_amount
-        
         if command != None: command()  # Go to the specified procedure from passed command if it is specified.
         if all_widgets == True:
             # Clear all page content
@@ -860,7 +856,7 @@ class Completion:
 
     # Method for submitting the quiz details to the "users" list and saving them to the JSON file (saving is done in the "save_details" method within the "Tools" class).
     def submit_details(self):
-        global ref_number, username, difficulty, difficulty_num, question_amount, users
+        global ref_number, username, difficulty, question_amount, users
         
         self.quiz.final_score = f"{self.quiz.score}/{question_amount}"
         if timer.get() == True:
@@ -981,6 +977,7 @@ class Quiz:
         self.question_no = 1                    # Variable for keeping track of which question the user is on, with the default value being 1.
         self.current_index = 0                  # Variable to store the index of the current question, defaulting to 0.
         self.timer_active = False               # Variable to store the state of the timer, defaulting to False (off).
+        self.active_topic = None                # Variable to store the active question topic (either trigonometry or algebra), defaulting to "None".
         self.elapsed_time = 0                   # Variable to store the elapsed time, defaulting to 0.
         self.calculated_elapsed_time = 0        # Variable to store the calculated elapsed time, defaulting to 0.
         self.quiz_start_time = None             # Variable to store the start time of the quiz, defaulting to None.
@@ -1127,21 +1124,110 @@ class Quiz:
             self.timer_job = self.timer_lbl.after(1000, self.timer_loop)
 
 
+    # Method for setting up the algebra questions.
+    def setup_algebra(self):
+        self.active_topic = "Algebra"
+        self.current_question = question_details[self.current_index][3]  # Define the current question individually for either topic, since the question datatype is different for both topics.
+        
+        self.inner_frame = CTk.CTkFrame(self.question_frame, fg_color="#78b0f4", corner_radius=10)
+        self.inner_frame.grid(column=0, row=0, rowspan=2, padx=20)
+        self.inner_frame.columnconfigure(0, weight=0, minsize=370)
+        self.inner_frame.rowconfigure(0, weight=0, minsize=55)
+        self.inner_frame.rowconfigure(1, weight=0, minsize=50)
+        self.inner_frame.rowconfigure(2, weight=0, minsize=60)
+
+        # Create a label for the title text.
+        self.title_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_title, font=(DEFAULT_FONT, 22, "bold"), text_color=FONT_COLOUR)
+        self.title_lbl.grid(column=0, row=0, sticky=N, pady=(15,0))
+
+        # Create a label for the statement text regarding the question.
+        self.statement_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_statement, font=(SEMIBOLD_DEFAULT_FONT, 19), text_color=FONT_COLOUR)
+        self.statement_lbl.grid(column=0, row=1, sticky=S, pady=(0,5))
+
+        # Create a label for the question text.
+        self.question_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_question, font=(DEFAULT_FONT, 21, "bold"), text_color=FONT_COLOUR)
+        self.question_lbl.grid(column=0, row=2, sticky=N)
+        return
+
+
+    # Method for setting up the trigonometry questions.
+    def setup_trigonometry(self):
+        self.active_topic = "Trigonometry"
+        self.left_value = question_details[self.current_index][3][0]  # Get the first value of the "question_details" list.
+        self.bottom_value = question_details[self.current_index][3][1]  # Get the second value of the "question" list within the "question_details" list.
+        
+        self.inner_frame = CTk.CTkFrame(self.question_frame, fg_color="#78b0f4", corner_radius=10)
+        self.inner_frame.grid(column=0, row=0, rowspan=2, padx=20)
+        self.inner_frame.columnconfigure(0, weight=0, minsize=370)
+        self.inner_frame.rowconfigure(0, weight=0, minsize=165)
+
+        # Load the triangle image.
+        triangle_img = Image.open("AppData/Images/triangle.png")
+        triangle_img = CTk.CTkImage(light_image=triangle_img, dark_image=triangle_img, size=(200, 160))
+
+        # Create a label to display the image.
+        self.triangle_lbl = CTk.CTkLabel(master=self.inner_frame, image=triangle_img, text=None)
+        self.triangle_lbl.grid(row=0, column=0, sticky=E, padx=(0,20))
+
+        # Create a label for the title text.
+        self.title_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_title, font=(DEFAULT_FONT, 17, "bold"), text_color=FONT_COLOUR, justify=LEFT)
+        self.title_lbl.grid(column=0, row=0, sticky=NW, padx=(20,0), pady=(18,0))
+        
+        # Create a label for the statement text regarding the question.
+        self.statement_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_statement, font=(SEMIBOLD_DEFAULT_FONT, 17), text_color=FONT_COLOUR, justify=LEFT)
+        self.statement_lbl.grid(column=0, row=0, sticky=SW, padx=(20,0), pady=(0,42))
+
+        # Create a label for the triangle's left side length value.
+        self.left_length_lbl = CTk.CTkLabel(self.triangle_lbl, text=self.left_value, font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, anchor=E)
+        self.left_length_lbl.place(relx=0.285, rely=0.45, anchor=E)
+
+        # Create a label for the triangle's bottom side length value.
+        self.bottom_length_lbl = CTk.CTkLabel(self.triangle_lbl, text=self.bottom_value, font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR)
+        self.bottom_length_lbl.place(relx=0.625, rely=0.85, anchor=CENTER)
+        return
+
+
     # Method for updating the question and answer options for the current question.
     def update_question(self):
-        self.current_index = self.question_no - 1  # Remove 1 to correctly index from the lists (as lists start at index 0, but the question numbers start at 1).
-        self.current_title = question_details[self.current_index][0]
-        self.current_statement = question_details[self.current_index][1]
-        self.current_question = question_details[self.current_index][2]
-        self.correct_answer = question_details[self.current_index][3]
-        self.fake_answers = question_details[self.current_index][4]
+        self.current_index = self.question_no - 1  # Remove 1 to correctly index from the "question_details" list (since lists start at index 0, but the question numbers start at 1).
+        self.upcoming_topic = question_details[self.current_index][0]
+        self.current_title = question_details[self.current_index][1]
+        self.current_statement = question_details[self.current_index][2]
+        self.correct_answer = question_details[self.current_index][4]
+        self.fake_answers = question_details[self.current_index][5]
 
+        if self.active_topic == "Algebra" and self.upcoming_topic == "Trigonometry":  # Check if the current topic is algebra and the next topic is trigonometry, so that the previous algebra elements can be removed.
+            self.inner_frame.destroy()
+            self.title_lbl.destroy()
+            self.statement_lbl.destroy()
+            self.question_lbl.destroy()
+            self.setup_trigonometry()
+
+        elif self.active_topic == "Trigonometry" and self.upcoming_topic == "Algebra":  # Check if the current topic is trigonometry and the next topic is algebra, so that the previous trigonometry elements can be removed.
+            self.inner_frame.destroy()
+            self.title_lbl.destroy()
+            self.statement_lbl.destroy()
+            self.triangle_lbl.destroy()
+            self.left_length_lbl.destroy()
+            self.bottom_length_lbl.destroy()
+            self.setup_algebra()
+        
+        elif self.active_topic == "Algebra" and self.upcoming_topic == "Algebra":  # Check if the current topic is algebra and the next topic is algebra, meaning no elements need to be removed.
+            self.current_question = question_details[self.current_index][3]  # Define the current question individually for either topic, since the question datatype is different for both topics.
+            self.title_lbl.configure(text=self.current_title)
+            self.statement_lbl.configure(text=self.current_statement)
+            self.question_lbl.configure(text=self.current_question)
+        
+        elif self.active_topic == "Trigonometry" and self.upcoming_topic == "Trigonometry":  # Check if the current topic is trigonometry and the next topic is trigonometry, meaning no elements need to be removed.
+            self.left_value = question_details[self.current_index][3][0]  # Get the first value of the "question_details" list.
+            self.bottom_value = question_details[self.current_index][3][1]  # Get the second value of the "question" list within the "question_details" list.
+            self.statement_lbl.configure(text=self.current_statement)
+            self.left_length_lbl.configure(text=self.left_value)
+            self.bottom_length_lbl.configure(text=self.bottom_value)
+        
         # Shuffle answer options and assign them to buttons
         answer_choices = [self.correct_answer] + self.fake_answers
         random.shuffle(answer_choices)
-
-        self.statement_lbl.configure(text=self.current_statement)
-        self.question_lbl.configure(text=self.current_question)
 
         self.btn_1.configure(text=f" A.    {answer_choices[0]}", command=lambda: self.answer_management(answer_choices[0]))
         self.btn_2.configure(text=f" B.    {answer_choices[1]}", command=lambda: self.answer_management(answer_choices[1]))
@@ -1169,14 +1255,15 @@ class Quiz:
 
     def hard_mode(self):
         global question_details, fake_answers
-        #question_topic = random.randint(0, 1)
-        question_topic = 1  # For testing, use just the one step equation algebra question type.
-        if question_topic == 0:  # If the random number is 0, then the question topic is triangle area.
-            return
-        elif question_topic == 1:  # If the random number is 1, then the question topic is binomial expansion.
-            letters = ["x", "y", "z", "a", "b", "c", "m", "n"]
+
+        question_topic = "Algebra"  # For testing, use just the one step equation algebra question type.
+        for i in range(question_amount):  # Loop through the number of questions to be generated.
+            #question_topic = random.choice(["Trigonometry", "Algebra"])
+            if question_topic == "Trigonometry":
+                return
             
-            for i in range(question_amount):
+            elif question_topic == "Algebra":
+                letters = ["x", "y", "z", "a", "b", "c", "m", "n"]
                 question_title = "Binomial Expansion"
                 question_statement = f"Expand the following:"
                 
@@ -1211,21 +1298,22 @@ class Quiz:
                     if complete_fake != answer and complete_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
                         fake_answers.append(complete_fake)  # Append each formatted fake answer to the fake answers list.
 
-                # Append the question details to the question_details list.
-                question_details.append([question_title, question_statement, question, answer, fake_answers])
+            # Append the question details to the question_details list.
+            question_details.append([question_topic, question_title, question_statement, question, answer, fake_answers])
         return
     
 
     def medium_mode(self):
         global question_details, fake_answers
-        #question_topic = random.randint(0, 1)
-        question_topic = 1  # For testing, use just the one step equation algebra question type.
-        if question_topic == 0:  # If the random number is 0, then the question topic is triangle area.
-            return
-        elif question_topic == 1:  # If the random number is 1, then the question topic is one step equation algebra.
-            letters = ['x', 'y', 'z', 'a', 'b', 'c', 'm', 'n']
+
+        question_topic = "Algebra"  # For testing, use just the one step equation algebra question type.
+        for i in range(question_amount):  # Loop through the number of questions to be generated.
+            #question_topic = random.choice(["Trigonometry", "Algebra"])
+            if question_topic == "Trigonometry":
+                return
             
-            for i in range(question_amount):
+            elif question_topic == "Algebra":
+                letters = ['x', 'y', 'z', 'a', 'b', 'c', 'm', 'n']
                 letter = random.choice(letters)
                 question_title = "One Step Equations"
                 question_statement = f"Solve for {letter}:"
@@ -1266,21 +1354,67 @@ class Quiz:
                     if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
                         fake_answers.append(formatted_fake)  # Append each formatted fake answer to the fake answers list.
 
-                # Append the question details to the question_details list.
-                question_details.append([question_title, question_statement, question, formatted_answer, fake_answers])
+            # Append the question details to the question_details list.
+            question_details.append([question_topic, question_title, question_statement, question, formatted_answer, fake_answers])
         return
 
 
     def easy_mode(self):
         global question_details, fake_answers
-        #question_topic = random.randint(0, 1)
-        question_topic = 1  # For testing, use just the one step equation algebra question type.
-        if question_topic == 0:  # If the random number is 0, then the question topic is triangle area.
-            return
-        elif question_topic == 1:  # If the random number is 1, then the question topic is simplying like terms.
-            letters = ["x", "y", "z", "a", "b", "c", "m", "n"]
-            
-            for i in range(question_amount):
+
+        for i in range(question_amount):  # Loop through the number of questions to be generated.
+            question_topic = random.choice(["Trigonometry", "Algebra"])
+            if question_topic == "Trigonometry":
+                letter = None
+                question_title = "Area of Triangles"
+                question_statement = f"Find the area\nof the triangle:"
+
+                # Create a blank transparent image 160x160 in size.
+                image = Image.new("RGBA", (200, 160), (0, 0, 0, 0))  # "RGBA" for RBG with transparency, using (0, 0, 0, 0) for transparent background colur.
+                draw = ImageDraw.Draw(image)
+
+                # Coordinates of the right-angled triangle (at bottom-left corner).
+                # Triangle points: (x1, y1), (x2, y2), (x3, y3), with the zero point (0, 0) being the top left.
+                # Vertical line is from (65, 120) to (65, 20), horizontal line is from (190, 120) to (65, 120), and a hypotenuse connecting the top of the vertical line to the end of the horizontal line.
+                points = [(65, 120), (65, 20), (190, 120)]
+
+                # Draw triangle using lines.
+                draw.line([points[0], points[1]], fill="white", width=3)  # Draw a vertical line (opposite).
+                draw.line([points[2], points[0]], fill="white", width=3)  # Draw a horizontal line (base).
+                draw.line([points[1], points[2]], fill="white", width=3)  # Draw a diagonal line (hypotenuse).
+
+                # Define the points for the right-angle square, which tucks into the bottom-left corner of the triangle.
+                square_size = 15
+                square_points = [
+                    (points[0][0], points[0][1] - square_size),                # Move vertically up from the right-angle corner.
+                    (points[0][0] + square_size, points[0][1] - square_size),  # Move diagonally up-right.
+                    (points[0][0] + square_size, points[0][1])                 # Move horizontally right.
+                ]
+
+                # Draw the small square using two connected lines to represent the right-angle symbol.
+                draw.line([square_points[0], square_points[1]], fill="white", width=3)  # Top side of the square (horizontal)
+                draw.line([square_points[1], square_points[2]], fill="white", width=3)  # Right side of the square (vertical)
+
+                # Save the image.
+                image.save("AppData/Images/triangle.png")
+
+                number1 = random.randint(2, 12)  # Generate a random number between 2 and 12 for the left side of the triangle (opposite).
+                number2 = random.randint(number1, number1+12)  # Generate a random number larger than the left side with a maximum of 12 above it, for the bottom side of the triangle (base).
+                question = [f"{number1} cm", f"{number2} cm"]  # Since there is no question, make the "question" a list with the two numbers associated with the triangle.
+                answer = (number2*number1)/2
+
+                formatted_answer = f"{str(int(answer)) if answer == int(answer) else '{:.2f}'.format(answer)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
+
+                fake_answers = []
+                while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
+                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between -2 or 2 and -10 or 10.
+                    fake = answer + offset
+                    formatted_fake = f"{str(int(fake)) if fake == int(fake) else '{:.2f}'.format(fake)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
+                    if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
+                        fake_answers.append(formatted_fake)  # Append each formatted fake answer to the fake answers list.
+
+            elif question_topic == "Algebra":
+                letters = ["x", "y", "z", "a", "b", "c", "m", "n"]
                 letter = random.choice(letters)
                 question_title = "Like Terms"
                 question_statement = f"Simplify the following:"
@@ -1324,8 +1458,8 @@ class Quiz:
                     if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
                         fake_answers.append(formatted_fake)  # Append each formatted fake answer to the fake answers list.
 
-                # Append the question details to the question_details list.
-                question_details.append([question_title, question_statement, question, formatted_answer, fake_answers])
+            # Append the question details to the question_details list.
+            question_details.append([question_topic, question_title, question_statement, question, formatted_answer, fake_answers])
         return
 
 
@@ -1441,33 +1575,17 @@ class Quiz:
         self.question_frame.rowconfigure(0, weight=0, minsize=50)
         self.question_frame.rowconfigure(1, weight=0, minsize=155)
 
-        self.current_title = question_details[self.current_index][0]
-        self.current_statement = question_details[self.current_index][1]
-        self.current_question = question_details[self.current_index][2]
-        self.correct_answer = question_details[self.current_index][3]
-        self.fake_answers = question_details[self.current_index][4]
+        self.upcoming_topic = question_details[self.current_index][0]
+        self.current_title = question_details[self.current_index][1]
+        self.current_statement = question_details[self.current_index][2]
+        self.correct_answer = question_details[self.current_index][4]
+        self.fake_answers = question_details[self.current_index][5]
 
-        # Create a label for the title text.
-        self.title_lbl = CTk.CTkLabel(self.question_frame, text=self.current_title, font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR)
-        self.title_lbl.grid(column=0, row=0, sticky=S, padx=20)
-
-        # Create a canvas for question images.
-        #self.question_canvas = CTk.CTkCanvas(self.question_frame, bd=0, highlightthickness=0)
-        #self.question_canvas.grid(row=1, column=0, padx=20)
-        
-        self.inner_frame = CTk.CTkFrame(self.question_frame, fg_color="#78b0f4", corner_radius=10)
-        self.inner_frame.grid(column=0, row=1, padx=20)
-        self.inner_frame.columnconfigure(0, weight=0, minsize=370)
-        self.inner_frame.rowconfigure(0, weight=0, minsize=55)
-        self.inner_frame.rowconfigure(1, weight=0, minsize=60)
-
-        # Create a label for the statement text regarding the question.
-        self.statement_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_statement, font=(DEFAULT_FONT, 20, "bold"), text_color=FONT_COLOUR, pady=0)
-        self.statement_lbl.grid(column=0, row=0, padx=20)
-
-        # Create a label for the question text.
-        self.question_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_question, font=(DEFAULT_FONT, 22, "bold"), text_color=FONT_COLOUR, pady=0)
-        self.question_lbl.grid(column=0, row=1, pady=(0,15))
+        # Set up the main question GUI contents depending on the topic.
+        if self.upcoming_topic == "Trigonometry":
+            self.setup_trigonometry()
+        elif self.upcoming_topic == "Algebra":
+            self.setup_algebra()
 
         # Create a frame for the answer buttons
         self.answer_frame = CTk.CTkFrame(self.main_content_frame, fg_color="transparent")
@@ -1600,13 +1718,13 @@ class Home:
         self.main_content_frame.grid(column=1, row=0, sticky=EW, padx=35, pady=(0,20))
 
         # Logo creation
-        self.logo_canvas = Canvas(self.main_content_frame, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        self.logo_canvas.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,0))
-        self.logo = Image.open("AppData/Images/logo.png")
-        self.logo = ImageTk.PhotoImage(self.logo)
-        self.logo_canvas.configure(width=410, height=self.logo.height()+5)  # Add 5 pixels to height to prevent image clipping on the bottom of image.
-        self.logo_canvas.create_image(410 / 2, self.logo.height() / 2, anchor=CENTER, image=self.logo)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
-        self.logo_canvas.image = self.logo
+        logo_canvas = Canvas(self.main_content_frame, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+        logo_canvas.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,0))
+        logo = Image.open("AppData/Images/logo.png")
+        logo = ImageTk.PhotoImage(logo)
+        logo_canvas.configure(width=410, height=logo.height()+5)  # Add 5 pixels to height to prevent image clipping on the bottom of image.
+        logo_canvas.create_image(410 / 2, logo.height() / 2, anchor=CENTER, image=logo)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
+        logo_canvas.image = logo
 
         # Set up a content frame to place the main home elements inside.
         home_frame1 = CTk.CTkFrame(self.main_content_frame, fg_color=FRAME_FG, corner_radius=10)
@@ -1689,7 +1807,7 @@ class Home:
 
 # Main function for starting the program.
 def main(): 
-    global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
+    global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DEFAULT_FONT, SEMIBOLD_DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
     global full_directory, initial_pdf_directory, INITIAL_PDF_NAME, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
     global users, quiz_paused, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
 
@@ -1698,7 +1816,7 @@ def main():
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "3.2.0"
+    APP_VERSION = "3.3.0"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
@@ -1721,12 +1839,14 @@ def main():
     FONT_COLOUR = "#FFFFFF"                     # Set the font colour to be used for all CTk elements.
     
     # Default program font
-    DEFAULT_FONT = "Segoe UI"                   # Set the default font to be used for all CTk elements.
+    available_fonts = font.families()  # Get a list of available fonts on the system.
+    DEFAULT_FONT = "Segoe UI" if "Segoe UI" in available_fonts else "TkDefaultFont"  # Use "Segoe UI" if available, otherwise use "TkDefaultFont" as a fallback.
+    SEMIBOLD_DEFAULT_FONT = "Segoe UI Semibold" if "Segoe UI Semibold" in available_fonts else "Segoe UI" if "Segoe UI" in available_fonts else "TkDefaultFont"  # Use "Segoe UI Semibold" if available, otherwise use "Segoe UI" if available, otherwise use "TkDefaultFont" as a final fallback.
 
     # Setup the directories and paths for saving and loading data.
     full_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"  # Get the absolute intended path of the JSON files for debugging purposes when errors and warnings occur, storing it in "full_directory".
-    initial_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"      # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "initial_pdf_directory".
-    INITIAL_PDF_NAME = "QWhizz Math Scoreboard.pdf"      # Set the file path for the scoreboard PDF file.
+    initial_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"   # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "initial_pdf_directory".
+    INITIAL_PDF_NAME = "QWhizz Math Scoreboard.pdf"   # Set the file path for the scoreboard PDF file.
     SCOREBOARD_FILE_PATH = "AppData/scoreboard.json"  # Set the file path for the scoreboard JSON file.
     SETTINGS_FILE_PATH = "AppData/settings.json"      # Set the file path for the settings JSON file.
 
