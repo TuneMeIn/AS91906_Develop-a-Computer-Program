@@ -1267,7 +1267,7 @@ class Quiz:
                 question_title = "Binomial Expansion"
                 question_statement = f"Expand the following:"
                 
-                # e.g. (x - 3)(x + 2) = ?
+                # e.g. (x - 3)(x + 2) = ?.
                 letter = random.choice(letters)
                 number1 = random.choice([-1, 1]) * random.randint(1, 12)  # Generate a random number between 1 and 12, then multiply it by -1 or 1 to create a random number between -12 and 12.
                 number2 = random.choice([-1, 1]) * random.randint(1, 12)  # Generate a random number between 1 and 12, then multiply it by -1 or 1 to create a random number between -12 and 12.
@@ -1278,7 +1278,9 @@ class Quiz:
                 section2 = number2 + number1  # Combine the like terms, e.g. 2x + 3x = 5x.
                 section3 = number1 * number2  # Multiply the last terms, e.g. 2 * 3 = 6.
 
-                # If section 2 is 0, make "formatted_section2" an empty string. If it's -1, use just a negative letter for "formatted_section2". If it's 1, use just a positive letter for "formatted_section2". If it's not 0 or -1 or 1, use a positive sign with section 2 and the letter for "formatted_section2". Finally, if section 2 is negative, use a negative sign with section 2 and the letter for "formatted_section2".
+                # If section 2 is 0, make "formatted_section2" an empty string. If it's -1, use just a negative letter for "formatted_section2".
+                # If it's 1, use just a positive letter for "formatted_section2". If it's not 0 or -1 or 1, use a positive sign with section 2 and the letter for "formatted_section2".
+                # Finally, if section 2 is negative, use a negative sign with section 2 and the letter for "formatted_section2".
                 formatted_section2 = f"" if section2 == 0 else f" - {letter}" if section2 == -1 else f" + {letter}" if section2 == 1 else f" + {section2}{letter}" if not str(section2).startswith("-") else f" - {str(section2).removeprefix('-')}{letter}"  # If section 2 is 1 or -1, use just the letter as the answer (this follows algebra rules where "1x" is the same as "x" and "-1x" is the same as "-x").
                 formatted_section3 = f" + {section3}" if not str(section3).startswith("-") else f" - {str(section3).removeprefix('-')}"  # If section 3 isn't negative, use a positive sign with section 3 for "formatted_section3". If section 3 is negative, use a negative sign with section 3 for "formatted_section3".
                 answer = f"{section1}{formatted_section2}{formatted_section3}"  # Combine the sections to create the answer.
@@ -1290,7 +1292,9 @@ class Quiz:
                     fake1 = section2 + offset1  # Add the offset to section 2 to create a fake answer.
                     fake2 = section3 + offset2  # Add the offset to section 3 to create a fake answer.
                     
-                    # If fake 1 is 0, make "formatted_fake1" an empty string. If it's -1, use just a negative letter for "formatted_fake1". If it's 1, use just a positive letter for "formatted_fake1". If it's not 0 or -1 or 1, use a positive sign with fake 1 and the letter for "formatted_fake1". Finally, if fake 1 is negative, use a negative sign with fake 1 and the letter for "formatted_fake1".
+                    # If fake 1 is 0, make "formatted_fake1" an empty string. If it's -1, use just a negative letter for "formatted_fake1".
+                    # If it's 1, use just a positive letter for "formatted_fake1". If it's not 0 or -1 or 1, use a positive sign with fake 1 and the letter for "formatted_fake1".
+                    # Finally, if fake 1 is negative, use a negative sign with fake 1 and the letter for "formatted_fake1".
                     formatted_fake1 = f"" if fake1 == 0 else f" - {letter}" if fake1 == -1 else f" + {letter}" if fake1 == 1 else f" + {fake1}{letter}" if not str(fake1).startswith("-") else f" - {str(fake1).removeprefix('-')}{letter}"
                     formatted_fake2 = f"" if fake2 == 0 else f" + {fake2}" if not str(fake2).startswith("-") else f" - {str(fake2).removeprefix('-')}"
                     complete_fake = f"{section1}{formatted_fake1}{formatted_fake2}"
@@ -1392,8 +1396,8 @@ class Quiz:
                 ]
 
                 # Draw the small square using two connected lines to represent the right-angle symbol.
-                draw.line([square_points[0], square_points[1]], fill="white", width=3)  # Top side of the square (horizontal)
-                draw.line([square_points[1], square_points[2]], fill="white", width=3)  # Right side of the square (vertical)
+                draw.line([square_points[0], square_points[1]], fill="white", width=3)  # Top side of the square (horizontal).
+                draw.line([square_points[1], square_points[2]], fill="white", width=3)  # Right side of the square (vertical).
 
                 # Save the image.
                 image.save("AppData/Images/triangle.png")
