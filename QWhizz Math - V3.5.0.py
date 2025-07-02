@@ -134,21 +134,23 @@ class Tools:
 
     # Method for handling errors and preventing repeated code.
     def error_control(self, file_name, file_dir, file_data, control):
-        global users, settings, timer, deletion_history_states
+        global users, settings, timer, enable_trigonometry, enable_algebra, deletion_history_states
         
         # Temporary storage mode
         if control == "Temporary":
             if file_data == "users": users = []          # If the "file_data" variable is set to "users", make "users" as an empty list.
             elif file_data == "settings":
-                settings = default_settings              # If the "file_data" variable is set to "settings", make "settings" store the default settings.
-                timer.set(settings.get("enable_timer"))  # Set the timer to the value stored in the "default_settings" dictionary.
+                settings = default_settings  # If the "file_data" variable is set to "settings", make "settings" store the default settings.
+                timer.set(settings.get("enable_timer"))                               # Set the timer to the value stored in the "default_settings" dictionary.
+                enable_trigonometry.set(settings.get("enable_trigonometry"))          # Set "enable_trigonometry" to the value stored in the "default_settings" dictionary.
+                enable_algebra.set(settings.get("enable_algebra"))                    # Set "enable_algebra" to the value stored in the "default_settings" dictionary.
                 deletion_history_states.set(settings.get("deletion_history_states"))  # Set the deletion history states to the value stored in the "default_settings" dictionary.
         return  # Exit the function after handling the error control for temporary storage mode.
 
     
     # Function for loading the "users" and "settings" lists from the JSON files.
     def load_details(self, file_name, file_dir, file_data):
-            global data_loaded, users, settings, timer, deletion_history_states
+            global data_loaded, users, settings, timer, enable_trigonometry, enable_algebra, deletion_history_states
             
             # Check if the JSON file exists. If not, create it.
             if not os.path.exists(file_dir):   
@@ -214,12 +216,14 @@ class Tools:
                     if not isinstance(data, dict): # Check if the loaded data is a dictionary.
                         raise json.JSONDecodeError("Expected a dict", doc=str(data), pos=0)  # Raise an error if the loaded settings data is not a dictionary, simulating a JSON decode error.
                     
-                    if "enable_timer" not in data or "deletion_history_states" not in data:
+                    if "enable_timer" not in data or "enable_trigonometry" not in data or "enable_algebra" not in data or "deletion_history_states" not in data:
                         raise json.JSONDecodeError("Missing required keys in settings", doc=str(data), pos=0)
                     
                     settings.clear()    # Clear the list to prevent duplicate entries.
                     settings = data     # Modify the "settings" dictionary in place.
-                    timer.set(settings.get("enable_timer", default_settings["enable_timer"]))  # Set the timer to the value stored in the "settings" dictionary, or the default value if not found.
+                    timer.set(settings.get("enable_timer", default_settings["enable_timer"]))                                          # Set the timer to the value stored in the "settings" dictionary, or the default value if not found.
+                    enable_trigonometry.set(settings.get("enable_trigonometry", default_settings["enable_trigonometry"]))              # Set "enable_trigonometry" to the value stored in the "settings" dictionary, or the default value if not found.
+                    enable_algebra.set(settings.get("enable_algebra", default_settings["enable_algebra"]))                             # Set "enable_algebra" to the value stored in the "settings" dictionary, or the default value if not found.
                     deletion_history_states.set(settings.get("deletion_history_states", default_settings["deletion_history_states"]))  # Set the deletion history states to the value stored in the "settings" dictionary, or the default value if not found.
                 
                 data_loaded = True      # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
@@ -295,7 +299,7 @@ class Tools:
 
     # Method for saving details specific to the specified window.
     def save_details(self, procedure, origin, scenario, file_dir):
-        global ref_number, username, difficulty_num, question_amount, data_loaded
+        global ref_number, username, difficulty_num, question_amount, settings, data_loaded, enable_trigonometry, enable_algebra, use_trigonometry_questions, use_algebra_questions
         
         if origin == "Home":
             if scenario == "Temporary" or scenario == "Permanent":
@@ -320,7 +324,27 @@ class Tools:
                             break
             
             if procedure == "Quiz":
-                self.clear_widget(self.quiz.setup_quiz, True, None, None, None)
+                use_trigonometry_questions = enable_trigonometry.get()
+                use_algebra_questions = enable_algebra.get()
+                if use_trigonometry_questions == False and use_algebra_questions == False:
+                    response1 = messagebox.askyesno("No Question Topics Selected", "The quiz cannot be started until a question topic is selected from the settings menu.\n\nDo you want to enable all question topics?", icon="warning")
+                    if response1 == False: return
+                    else:
+                        enable_algebra.set(True)
+                        enable_trigonometry.set(True)
+                        try:
+                            settings = {"enable_timer": timer.get(), "enable_trigonometry": enable_trigonometry.get(),"enable_algebra": enable_algebra.get(), "deletion_history_states": deletion_history_states.get()}
+                            with open(file_dir, "w") as file:        # Open the file in write mode ("w"). If it doesn't exist, a new file will be created.
+                                json.dump(settings, file, indent=4)  # Dump the entries from the "users" list into the JSON file.
+                                file.close()                         # Close the file after writing to it.
+                            data_loaded = False                      # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                        except IOError as io_error:                  # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
+                            messagebox.showerror("File Error", f"Failed to write to 'settings.json'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be written to.
+                            return
+                        except Exception as e:                       # Error control for any other exceptions that may occur.
+                            messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'settings.json'.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
+                            return
+                self.clear_widget(lambda: self.quiz.setup_quiz(None), True, None, None, None)
             elif procedure == "Scoreboard":
                 self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
             else:
@@ -338,9 +362,8 @@ class Tools:
                     messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'scoreboard.json'.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
         
         elif origin == "Menubar":
-                global settings
                 try:
-                    settings = {"enable_timer": timer.get(), "deletion_history_states": deletion_history_states.get()}
+                    settings = {"enable_timer": timer.get(), "enable_trigonometry": enable_trigonometry.get(),"enable_algebra": enable_algebra.get(), "deletion_history_states": deletion_history_states.get()}
                     with open(file_dir, "w") as file:        # Open the file in write mode ("w"). If it doesn't exist, a new file will be created.
                         json.dump(settings, file, indent=4)  # Dump the entries from the "users" list into the JSON file.
                         file.close()                         # Close the file after writing to it.
@@ -349,6 +372,23 @@ class Tools:
                     messagebox.showerror("File Error", f"Failed to write to 'settings.json'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be written to.
                 except Exception as e:                       # Error control for any other exceptions that may occur.
                     messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'settings.json'.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
+
+        elif origin == "Quiz":
+            if procedure == "New Quiz":
+                enable_algebra.set(True)
+                enable_trigonometry.set(True)
+                try:
+                    settings = {"enable_timer": timer.get(), "enable_trigonometry": enable_trigonometry.get(),"enable_algebra": enable_algebra.get(), "deletion_history_states": deletion_history_states.get()}
+                    with open(file_dir, "w") as file:        # Open the file in write mode ("w"). If it doesn't exist, a new file will be created.
+                        json.dump(settings, file, indent=4)  # Dump the entries from the "users" list into the JSON file.
+                        file.close()                         # Close the file after writing to it.
+                    data_loaded = False                      # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                except IOError as io_error:                  # Error control for instances such as the file being inaccessible or lacking the permission to write to it.
+                    messagebox.showerror("File Error", f"Failed to write to 'settings.json'. Check file permissions, disk space, and ensure the file is not in use.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be written to.
+                    return
+                except Exception as e:                       # Error control for any other exceptions that may occur.
+                    messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'settings.json'.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
+                    return
 
 
     # Method for printing details into a PDF.
@@ -696,6 +736,10 @@ class Scoreboard:
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
         timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        question_settings = Menu(scoreboard_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
+        settings_menu.add_cascade(menu=question_settings, label="Question Topics")
+        question_settings.add_checkbutton(label="Trigonometry", variable=enable_trigonometry, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        question_settings.add_checkbutton(label="Algebra", variable=enable_algebra, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings = Menu(scoreboard_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=history_settings, label="Score Deletion History States")
         history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
@@ -882,6 +926,10 @@ class Completion:
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
         timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH), value=True)
         timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH), value=False)
+        question_settings = Menu(completion_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
+        settings_menu.add_cascade(menu=question_settings, label="Question Topics")
+        question_settings.add_checkbutton(label="Trigonometry", variable=enable_trigonometry, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        question_settings.add_checkbutton(label="Algebra", variable=enable_algebra, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings = Menu(completion_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=history_settings, label="Score Deletion History States")
         history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
@@ -1012,6 +1060,7 @@ class Quiz:
 
 
     def stop_timer(self, command, origin):
+        global use_trigonometry_questions, use_algebra_questions
         self.timer_active = False
         # Cancel the "after" job if it is currently still running.
         if hasattr(self, "timer_job") and self.timer_job != None:
@@ -1025,6 +1074,12 @@ class Quiz:
             if command == "New Quiz":
                 response1 = messagebox.askyesno("New Quiz", "Are you sure you want to start a new quiz?\nAll progress will be lost.", icon="warning")
                 if response1 == False: return
+                use_trigonometry_questions = enable_trigonometry.get()
+                use_algebra_questions = enable_algebra.get()
+                if use_trigonometry_questions == False and use_algebra_questions == False:
+                    response1 = messagebox.askyesno("No Question Topics Selected", "A new quiz cannot be started until a question topic is selected from the settings menu.\n\nDo you want to enable all question topics?", icon="warning")
+                    if response1 == False: return
+                    else: self.tools.save_details("New Quiz", "Quiz", None, SETTINGS_FILE_PATH)
             self.tools.unbind_keys(self.binded_keys)
 
         if command == "Home" or command == "Restart Quiz" or command == "New Quiz":
@@ -1052,10 +1107,10 @@ class Quiz:
                 self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the scoreboard page.
         elif command == "New Quiz":
             self.tools.reset_details("Quiz", "New")  # Pass "None" action so that all quiz details are cleared.
-            self.tools.clear_widget(self.setup_quiz, True, None, None, None)
+            self.tools.clear_widget(lambda: self.setup_quiz(None), True, None, None, None)
         elif command == "Restart Quiz":
             self.tools.reset_details("Quiz", "Restart")  # Pass "restart" action so that the question details aren't cleared.
-            self.tools.clear_widget(self.setup_quiz, True, None, None, None)
+            self.tools.clear_widget(lambda: self.setup_quiz("Restart Quiz"), True, None, None, None)
 
 
     def pause_quiz(self):
@@ -1160,10 +1215,36 @@ class Quiz:
         self.hypotenuse_value = question_details[self.current_index][3][0]  # Get the first value of the "question" list within the "question_details" list.
         self.left_value = question_details[self.current_index][3][1]        # Get the second value of the "question" list within the "question_details" list.
         self.bottom_value = question_details[self.current_index][3][2]      # Get the third value of the "question" list within the "question_details" list.
+        self.angle_value = question_details[self.current_index][3][3]       # Get the fourth value of the "question" list within the "question_details" list.
+
+        # Create a blank transparent image 200x160 px in size.
+        image = Image.new("RGBA", (200, 160), (0, 0, 0, 0))  # "RGBA" for RBG with transparency, using (0, 0, 0, 0) for transparent background colour.
+        draw = ImageDraw.Draw(image)
+
+        # Coordinates of the right-angled triangle (at bottom-left corner).
+        # Triangle points: (x1, y1), (x2, y2), (x3, y3), with the zero point (0, 0) being the top left.
+        # Vertical line is from (65, 120) to (65, 20), horizontal line is from (190, 120) to (65, 120), and a hypotenuse connecting the top of the vertical line to the end of the horizontal line.
+        points = [(65, 120), (65, 20), (190, 120)]
+
+        # Draw triangle using lines.
+        draw.line([points[0], points[1]], fill="white", width=3)  # Draw a vertical line (opposite).
+        draw.line([points[2], points[0]], fill="white", width=3)  # Draw a horizontal line (adjacent).
+        draw.line([points[1], points[2]], fill="white", width=3)  # Draw a diagonal line (hypotenuse).
+
+        # Define the points for the right-angle square, which tucks into the bottom-left corner of the triangle.
+        square_size = 15
+        square_points = [
+            (points[0][0], points[0][1] - square_size),                # Move vertically up from the right-angle corner.
+            (points[0][0] + square_size, points[0][1] - square_size),  # Move diagonally up-right.
+            (points[0][0] + square_size, points[0][1])                 # Move horizontally right.
+        ]
+
+        # Draw the small square using two connected lines to represent the right-angle symbol.
+        draw.line([square_points[0], square_points[1]], fill="white", width=3)  # Top side of the square (horizontal).
+        draw.line([square_points[1], square_points[2]], fill="white", width=3)  # Right side of the square (vertical).
 
         # Load the triangle image.
-        triangle_img = Image.open("AppData/Images/triangle.png")
-        triangle_img = CTk.CTkImage(light_image=triangle_img, dark_image=triangle_img, size=(200, 160))
+        triangle_img = CTk.CTkImage(light_image=image, dark_image=image, size=(200, 160))
 
         # Create a label to display the image.
         self.triangle_lbl = CTk.CTkLabel(master=self.inner_frame, image=triangle_img, text=None)
@@ -1182,7 +1263,7 @@ class Quiz:
 
         # Create a label for the triangle's hypotenuse length value.
         self.hypotenuse_length_lbl = CTk.CTkLabel(self.triangle_lbl, text=self.hypotenuse_value, font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, anchor=W)
-        self.hypotenuse_length_lbl.place(relx=0.65, rely=0.32, anchor=W)
+        self.hypotenuse_length_lbl.place(relx=0.645, rely=0.325, anchor=W)
 
         # Create a label for the triangle's left side length value.
         self.left_length_lbl = CTk.CTkLabel(self.triangle_lbl, text=self.left_value, font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, anchor=E)
@@ -1191,6 +1272,10 @@ class Quiz:
         # Create a label for the triangle's bottom side length value.
         self.bottom_length_lbl = CTk.CTkLabel(self.triangle_lbl, text=self.bottom_value, font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR)
         self.bottom_length_lbl.place(relx=0.625, rely=0.85, anchor=CENTER)
+
+        # Create a label for the triangle's angle value.
+        self.angle_value_lbl = CTk.CTkLabel(self.triangle_lbl, text=self.angle_value, font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR)
+        self.angle_value_lbl.place(relx=0.678, rely=0.658, anchor=CENTER)
         return
 
 
@@ -1213,8 +1298,10 @@ class Quiz:
             self.top_statement_lbl.destroy()
             self.bottom_statement_lbl.destroy()
             self.triangle_lbl.destroy()
+            self.hypotenuse_length_lbl.destroy()
             self.left_length_lbl.destroy()
             self.bottom_length_lbl.destroy()
+            self.angle_value_lbl.destroy()
             self.setup_algebra()
         
         elif self.active_topic == "Algebra" and self.upcoming_topic == "Algebra":  # Check if the current topic is algebra and the next topic is algebra, meaning no elements need to be removed.
@@ -1230,11 +1317,13 @@ class Quiz:
             self.hypotenuse_value = question_details[self.current_index][3][0]  # Get the first value of the "question" list within the "question_details" list.
             self.left_value = question_details[self.current_index][3][1]        # Get the second value of the "question" list within the "question_details" list.
             self.bottom_value = question_details[self.current_index][3][2]      # Get the third value of the "question" list within the "question_details" list.
+            self.angle_value = question_details[self.current_index][3][3]       # Get the fourth value of the "question" list within the "question_details" list.
             self.top_statement_lbl.configure(text=self.current_top_statement)
             self.bottom_statement_lbl.configure(text=self.current_bottom_statement)
             self.hypotenuse_length_lbl.configure(text=self.hypotenuse_value)
             self.left_length_lbl.configure(text=self.left_value)
             self.bottom_length_lbl.configure(text=self.bottom_value)
+            self.angle_value_lbl.configure(text=self.angle_value)
         
         # Shuffle answer options and assign them to buttons
         answer_choices = [self.correct_answer] + self.fake_answers
@@ -1267,11 +1356,56 @@ class Quiz:
     def hard_mode(self):
         global question_details, fake_answers
 
-        question_topic = "Algebra"  # For testing, use just the one step equation algebra question type.
         for i in range(question_amount):  # Loop through the number of questions to be generated.
-            #question_topic = random.choice(["Trigonometry", "Algebra"])
+            if use_trigonometry_questions == True and use_algebra_questions == False:
+                question_topic = "Trigonometry"
+            elif use_trigonometry_questions == False and use_algebra_questions == True:
+                question_topic = "Algebra"
+            else:
+                question_topic = random.choice(["Trigonometry", "Algebra"])
+            
             if question_topic == "Trigonometry":
-                return
+                letter = "x"
+                angle_deg = 40  # Angle in degrees.
+                angle_rad = math.radians(angle_deg)  # Convert angle to radians to use in calculations.
+                formatted_angle = f"{angle_deg}\u00B0"
+                question_title = "Trigonometric\nRatios"
+
+                question_type = random.randint(0, 2)  # Generate a random number between 0 and 2 for the question type, which determines what sides of the triangle the two numbers are placed on.
+                side = "opposite" if question_type == 0 else "hypotenuse" if question_type == 1 else "adjacent"
+                statement_s1 = "Find the length"  # Set the question statement for section 1 (top).
+                statement_s2 = f"of the {side}:"  # Set the question statement for section 2 (bottom).
+                question_statement = [statement_s1, statement_s2]  # Create a list of the question statement sections.
+
+                # Question list order is [hypotenuse, left side, bottom side, angle].
+                # Make the hypotenuse the known side of the triangle, and the opposite the unknown side.
+                if question_type == 0:
+                    number1 = random.randint(6, 24)                            # Generate a random number between 5 and 20 for the hypotenuse of the triangle.
+                    question = [f"{number1} cm", letter, "", formatted_angle]  # Since there is no question, make the "question" a list with the values associated with the triangle.
+                    answer = number1 * math.sin(angle_rad)                     # Calculate the left side (opposite) using the sine of the angle.
+                # Make the bottom side (adjacent) the known side of the triangle, and the hypotenuse the unknown side.
+                elif question_type == 1:
+                    number1 = random.randint(4, 16)                            # Generate a random number between 2 and 12 for the left side of the triangle (opposite).
+                    question = [letter, "", f"{number1} cm", formatted_angle]  # Since there is no question, make the "question" a list with the values associated with the triangle.
+                    answer = number1 / math.cos(angle_rad)                     # Calculate the hypotenuse using the cosine of the angle.
+                # Make the left side (opposite) the known side of the triangle, and the bottom side (adjacent) the unknown side.
+                elif question_type == 2:
+                    number1 = random.randint(4, 16)                            # Generate a random number between 2 and 12 for the bottom side of the triangle (adjacent).
+                    question = ["", f"{number1} cm", letter, formatted_angle]  # Since there is no question, make the "question" a list with the values associated with the triangle.
+                    answer = number1 / math.tan(angle_rad)                     # Calculate the bottom side (adjacent) using the tangent of the angle.
+
+                formatted_answer = f"{str(int(answer)) if answer == int(answer) else '{:.2f}'.format(answer)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
+
+                fake_answers = []
+                while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
+                    if answer == int(answer):
+                        offset = random.choice([-1, 1]) * random.randint(1, 6)  # Generate a random offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
+                    else:
+                        offset = random.choice([-1, 1]) * random.uniform(1, 6)  # Generate a random decimal offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
+                    fake = answer + offset
+                    formatted_fake = f"{str(int(fake)) if fake == int(fake) else '{:.2f}'.format(fake)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
+                    if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
+                        fake_answers.append(formatted_fake)  # Append each formatted fake answer to the fake answers list.
             
             elif question_topic == "Algebra":
                 letters = ["x", "y", "z", "a", "b", "c", "m", "n"]
@@ -1294,7 +1428,7 @@ class Quiz:
                 # Finally, if section 2 is negative, use a negative sign with section 2 and the letter for "formatted_section2".
                 formatted_section2 = f"" if section2 == 0 else f" - {letter}" if section2 == -1 else f" + {letter}" if section2 == 1 else f" + {section2}{letter}" if not str(section2).startswith("-") else f" - {str(section2).removeprefix('-')}{letter}"  # If section 2 is 1 or -1, use just the letter as the answer (this follows algebra rules where "1x" is the same as "x" and "-1x" is the same as "-x").
                 formatted_section3 = f" + {section3}" if not str(section3).startswith("-") else f" - {str(section3).removeprefix('-')}"  # If section 3 isn't negative, use a positive sign with section 3 for "formatted_section3". If section 3 is negative, use a negative sign with section 3 for "formatted_section3".
-                answer = f"{section1}{formatted_section2}{formatted_section3}"  # Combine the sections to create the answer.
+                formatted_answer = f"{section1}{formatted_section2}{formatted_section3}"  # Combine the sections to create the answer.
 
                 fake_answers = []
                 while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
@@ -1310,11 +1444,11 @@ class Quiz:
                     formatted_fake2 = f"" if fake2 == 0 else f" + {fake2}" if not str(fake2).startswith("-") else f" - {str(fake2).removeprefix('-')}"
                     complete_fake = f"{section1}{formatted_fake1}{formatted_fake2}"
 
-                    if complete_fake != answer and complete_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
+                    if complete_fake != formatted_answer and complete_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
                         fake_answers.append(complete_fake)  # Append each formatted fake answer to the fake answers list.
 
             # Append the question details to the question_details list.
-            question_details.append([question_topic, question_title, question_statement, question, answer, fake_answers])
+            question_details.append([question_topic, question_title, question_statement, question, formatted_answer, fake_answers])
         return
     
 
@@ -1322,53 +1456,57 @@ class Quiz:
         global question_details, fake_answers
 
         for i in range(question_amount):  # Loop through the number of questions to be generated.
-            question_topic = random.choice(["Trigonometry", "Algebra"])
+            if use_trigonometry_questions == True and use_algebra_questions == False:
+                question_topic = "Trigonometry"
+            elif use_trigonometry_questions == False and use_algebra_questions == True:
+                question_topic = "Algebra"
+            else:
+                question_topic = random.choice(["Trigonometry", "Algebra"])
+            
             if question_topic == "Trigonometry":
                 letter = "x"
                 question_title = "Pythagorean\nTheorem"
-                statement_s1 = "Find the length"     # Set the question statement for section 1 (top).
-                statement_s2 = "of the hypotenuse:"  # Set the question statement for section 2 (bottom).
+
+                question_type = random.randint(0, 2)  # Generate a random number between 0 and 2 for the question type, which determines what sides of the triangle the two numbers are placed on.
+                side = "hypotenuse" if question_type == 0 else "adjacent" if question_type == 1 else "opposite"
+                statement_s1 = "Find the length"  # Set the question statement for section 1 (top).
+                statement_s2 = f"of the {side}:"  # Set the question statement for section 2 (bottom).
                 question_statement = [statement_s1, statement_s2]  # Create a list of the question statement sections.
 
-                # Create a blank transparent image 160x160 in size.
-                image = Image.new("RGBA", (200, 160), (0, 0, 0, 0))  # "RGBA" for RBG with transparency, using (0, 0, 0, 0) for transparent background colur.
-                draw = ImageDraw.Draw(image)
-
-                # Coordinates of the right-angled triangle (at bottom-left corner).
-                # Triangle points: (x1, y1), (x2, y2), (x3, y3), with the zero point (0, 0) being the top left.
-                # Vertical line is from (65, 120) to (65, 20), horizontal line is from (190, 120) to (65, 120), and a hypotenuse connecting the top of the vertical line to the end of the horizontal line.
-                points = [(65, 120), (65, 20), (190, 120)]
-
-                # Draw triangle using lines.
-                draw.line([points[0], points[1]], fill="white", width=3)  # Draw a vertical line (opposite).
-                draw.line([points[2], points[0]], fill="white", width=3)  # Draw a horizontal line (base).
-                draw.line([points[1], points[2]], fill="white", width=3)  # Draw a diagonal line (hypotenuse).
-
-                # Define the points for the right-angle square, which tucks into the bottom-left corner of the triangle.
-                square_size = 15
-                square_points = [
-                    (points[0][0], points[0][1] - square_size),                # Move vertically up from the right-angle corner.
-                    (points[0][0] + square_size, points[0][1] - square_size),  # Move diagonally up-right.
-                    (points[0][0] + square_size, points[0][1])                 # Move horizontally right.
-                ]
-
-                # Draw the small square using two connected lines to represent the right-angle symbol.
-                draw.line([square_points[0], square_points[1]], fill="white", width=3)  # Top side of the square (horizontal).
-                draw.line([square_points[1], square_points[2]], fill="white", width=3)  # Right side of the square (vertical).
-
-                # Save the image.
-                image.save("AppData/Images/triangle.png")
-
-                number1 = random.randint(2, 12)  # Generate a random number between 2 and 12 for the left side of the triangle (opposite).
-                number2 = random.randint(number1, number1+12)  # Generate a random number larger than the left side with a maximum of 12 above it, for the bottom side of the triangle (base).
-                question = [letter, f"{number1} cm", f"{number2} cm"]  # Since there is no question, make the "question" a list with the two numbers associated with the triangle.
-                answer = math.sqrt(number1**2 + number2**2)
+                # Question list order is [hypotenuse, left side, bottom side, angle(not used - set to None)].
+                # Make the hypotenuse the unknown side of the triangle.
+                if question_type == 0:
+                    number1 = random.randint(2, 12)                        # Generate a random number between 2 and 12 for the left side of the triangle (opposite).
+                    # Use "math.ceil" to round up the number to the nearest integer.
+                    min_num2 = math.ceil(number1*1.1)                      # Ensure the minimum number for the bottom side (adjacent) is larger than the left side (opposite) by at least 1.1x.
+                    number2 = random.randint(min_num2, min_num2+3)         # Generate a random number at least 1.1x larger than the left side, for the bottom side of the triangle (adjacent).
+                    question = [letter, f"{number1} cm", f"{number2} cm", None]  # Since there is no question, make the "question" a list with the values associated with the triangle.
+                    answer = math.sqrt(number1**2 + number2**2)            # Calculate the hypotenuse using Pythagorean theorem.
+                # Make the bottom side (adjacent) the unknown side of the triangle.
+                elif question_type == 1:
+                    number1 = random.randint(2, 12)                        # Generate a random number between 2 and 12 for the left side of the triangle (opposite).
+                    # Use "math.ceil" to round up the number to the nearest integer.
+                    min_num2 = math.ceil(number1*1.1)                      # Ensure the minimum number for the hypotenuse (hypotenuse) is larger than the left side (opposite) by at least 1.1x.
+                    number2 = random.randint(min_num2, min_num2+3)         # Generate a random number at least 1.1x larger than the left side, for the hypotenuse of the triangle.
+                    question = [f"{number2} cm", f"{number1} cm", letter, None]  # Since there is no question, make the "question" a list with the values associated with the triangle.
+                    answer = math.sqrt(number2**2 - number1**2)            # Calculate the bottom side (adjacent) using Pythagorean theorem.
+                # Make the left side (opposite) the unknown side of the triangle.
+                elif question_type == 2:
+                    number1 = random.randint(2, 12)                        # Generate a random number between 2 and 12 for the bottom side of the triangle (adjacent).
+                    # Use "math.ceil" to round up the number to the nearest integer.
+                    min_num2 = math.ceil(number1*1.1)                      # Ensure the minimum number for the hypotenuse is larger than the bottom side (adjacent) by at least 1.1x.
+                    number2 = random.randint(min_num2, min_num2+3)         # Generate a random number at least 1.1x larger than the bottom side, for the hypotenuse of the triangle.
+                    question = [f"{number2} cm", letter, f"{number1} cm", None]  # Since there is no question, make the "question" a list with the values associated with the triangle.
+                    answer = math.sqrt(number2**2 - number1**2)            # Calculate the left side (opposite) using Pythagorean theorem.
 
                 formatted_answer = f"{str(int(answer)) if answer == int(answer) else '{:.2f}'.format(answer)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
 
                 fake_answers = []
                 while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
-                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between -2 or 2 and -10 or 10.
+                    if answer == int(answer):
+                        offset = random.choice([-1, 1]) * random.randint(1, 6)  # Generate a random offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
+                    else:
+                        offset = random.choice([-1, 1]) * random.uniform(1, 6)  # Generate a random decimal offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
                     fake = answer + offset
                     formatted_fake = f"{str(int(fake)) if fake == int(fake) else '{:.2f}'.format(fake)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
                     if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
@@ -1410,7 +1548,10 @@ class Quiz:
 
                 fake_answers = []
                 while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
-                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between -2 or 2 and -10 or 10.
+                    if answer == int(answer):
+                        offset = random.choice([-1, 1]) * random.randint(1, 8)  # Generate a random offset between 2 and 10, then multiply it by -1 or 1 to create a random number between -10 and 10.
+                    else:
+                        offset = random.choice([-1, 1]) * random.uniform(1, 6)  # Generate a random decimal offset between 2 and 8, then multiply it by -1 or 1 to create a random number between -8 and 8.
                     fake = answer + offset
                     formatted_fake = str(int(fake)) if fake == int(fake) else "{:.2f}".format(fake)  # Format the answer to 2 decimal places if it is a float (decimal number).
                     if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
@@ -1425,53 +1566,35 @@ class Quiz:
         global question_details, fake_answers
 
         for i in range(question_amount):  # Loop through the number of questions to be generated.
-            question_topic = random.choice(["Trigonometry", "Algebra"])
+            if use_trigonometry_questions == True and use_algebra_questions == False:
+                question_topic = "Trigonometry"
+            elif use_trigonometry_questions == False and use_algebra_questions == True:
+                question_topic = "Algebra"
+            else:
+                question_topic = random.choice(["Trigonometry", "Algebra"])
+
             if question_topic == "Trigonometry":
-                letter = None
                 question_title = "Area of Triangles"
                 statement_s1 = "Find the area"     # Set the question statement for section 1 (top).
                 statement_s2 = "of the triangle:"  # Set the question statement for section 2 (bottom).
                 question_statement = [statement_s1, statement_s2]  # Create a list of the question statement sections.
 
-                # Create a blank transparent image 160x160 in size.
-                image = Image.new("RGBA", (200, 160), (0, 0, 0, 0))  # "RGBA" for RBG with transparency, using (0, 0, 0, 0) for transparent background colur.
-                draw = ImageDraw.Draw(image)
-
-                # Coordinates of the right-angled triangle (at bottom-left corner).
-                # Triangle points: (x1, y1), (x2, y2), (x3, y3), with the zero point (0, 0) being the top left.
-                # Vertical line is from (65, 120) to (65, 20), horizontal line is from (190, 120) to (65, 120), and a hypotenuse connecting the top of the vertical line to the end of the horizontal line.
-                points = [(65, 120), (65, 20), (190, 120)]
-
-                # Draw triangle using lines.
-                draw.line([points[0], points[1]], fill="white", width=3)  # Draw a vertical line (opposite).
-                draw.line([points[2], points[0]], fill="white", width=3)  # Draw a horizontal line (base).
-                draw.line([points[1], points[2]], fill="white", width=3)  # Draw a diagonal line (hypotenuse).
-
-                # Define the points for the right-angle square, which tucks into the bottom-left corner of the triangle.
-                square_size = 15
-                square_points = [
-                    (points[0][0], points[0][1] - square_size),                # Move vertically up from the right-angle corner.
-                    (points[0][0] + square_size, points[0][1] - square_size),  # Move diagonally up-right.
-                    (points[0][0] + square_size, points[0][1])                 # Move horizontally right.
-                ]
-
-                # Draw the small square using two connected lines to represent the right-angle symbol.
-                draw.line([square_points[0], square_points[1]], fill="white", width=3)  # Top side of the square (horizontal).
-                draw.line([square_points[1], square_points[2]], fill="white", width=3)  # Right side of the square (vertical).
-
-                # Save the image.
-                image.save("AppData/Images/triangle.png")
-
-                number1 = random.randint(2, 12)  # Generate a random number between 2 and 12 for the left side of the triangle (opposite).
-                number2 = random.randint(number1, number1+12)  # Generate a random number larger than the left side with a maximum of 12 above it, for the bottom side of the triangle (base).
-                question = [letter, f"{number1} cm", f"{number2} cm"]  # Since there is no question, make the "question" a list with the two numbers associated with the triangle.
-                answer = (number1*number2)/2
+                number1 = random.randint(2, 12)                        # Generate a random number between 2 and 12 for the left side of the triangle (opposite).
+                # Use "math.ceil" to round up the number to the nearest integer.
+                min_num2 = math.ceil(number1*1.1)                      # Ensure the minimum number for the bottom side (adjacent) is larger than the left side (opposite) by at least 1.1x.
+                number2 = random.randint(min_num2, min_num2+3)         # Generate a random number at least 1.1x larger than the left side, for the adjacent side of the triangle.
+                # Question list order is [hypotenuse (not used - set to None), left side, bottom side, angle (not used - set to None)].
+                question = [None, f"{number1} cm", f"{number2} cm", None]  # Since there is no question, make the "question" a list with the values associated with the triangle.
+                answer = (number1*number2)/2                           # Calculate the area of the triangle.
 
                 formatted_answer = f"{str(int(answer)) if answer == int(answer) else '{:.2f}'.format(answer)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
 
                 fake_answers = []
                 while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
-                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between -2 or 2 and -10 or 10.
+                    if answer == int(answer):
+                        offset = random.choice([-1, 1]) * random.randint(1, 6)  # Generate a random offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
+                    else:
+                        offset = random.choice([-1, 1]) * random.uniform(1, 6)  # Generate a random decimal offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
                     fake = answer + offset
                     formatted_fake = f"{str(int(fake)) if fake == int(fake) else '{:.2f}'.format(fake)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
                     if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
@@ -1509,16 +1632,11 @@ class Quiz:
 
                 fake_answers = []
                 while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
-                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between -2 or 2 and -10 or 10.
+                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between 2 and 10, then multiply it by -1 or 1 to create a random number between -10 and 10.
                     fake = answer + offset
-                    if fake == 1:
-                        formatted_fake = f"{letter}"
-                    elif fake == -1:
-                        formatted_fake = f"-{letter}"
-                    elif fake == 0:  # If the distractor is 0, then don't include the letter.
-                        formatted_fake = f"{fake}"
-                    else:
-                        formatted_fake = f"{fake}{letter}"
+                    # If the fake answer is 1 or -1, use just the letter as the formatted fake answer (this follows algebra rules where "1x" is the same as "x" and "-1x" is the same as "-x").
+                    # If it is 0, use just the number as the formatted fake answer. If it is not 1, -1, or 0, use the number and letter as the formatted fake answer.
+                    formatted_fake = f"{letter}" if fake == 1 else f"-{letter}" if fake == -1 else f"{fake}" if fake == 0 else f"{fake}{letter}"
                     if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
                         fake_answers.append(formatted_fake)  # Append each formatted fake answer to the fake answers list.
 
@@ -1528,17 +1646,18 @@ class Quiz:
 
 
     # Procedure for setting up the UI elements consisting of images, labels, entry boxes, sliders (scales), and buttons.
-    def setup_quiz(self):
+    def setup_quiz(self, scenario):
         global quiz_paused
         quiz_paused = False  # Set the flag to indicate that the quiz is not paused.
 
-        # Set the difficulty level of the quiz.
-        if difficulty == "Easy":
-            self.easy_mode()
-        elif difficulty == "Medium":
-            self.medium_mode()
-        elif difficulty == "Hard":
-            self.hard_mode()
+        if scenario != "Restart Quiz":  # Ensure that questions are not generated again when restarting the quiz.
+            # Set the difficulty level of the quiz.
+            if difficulty == "Easy":
+                self.easy_mode()
+            elif difficulty == "Medium":
+                self.medium_mode()
+            elif difficulty == "Hard":
+                self.hard_mode()
 
         # Set width for columns 0-1 (2 total) in the main window. Positive weight means the column will expand to fill the available space.
         main_window.columnconfigure(0, weight=1, minsize=0)
@@ -1559,6 +1678,10 @@ class Quiz:
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
         timer_settings.add_radiobutton(label="Enabled", variable=timer, command=lambda: self.tools.timer_config("Quiz Menubar", "Enable", self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH)), value=True)        # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
         timer_settings.add_radiobutton(label="Disabled", variable=timer, command=lambda: self.tools.timer_config("Quiz Menubar", "Disable", self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH)), value=False)     # Use lambda so that the method is called only when the radiobutton is clicked, rather than when it's defined.
+        question_settings = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
+        settings_menu.add_cascade(menu=question_settings, label="Question Topics")
+        question_settings.add_checkbutton(label="Trigonometry", variable=enable_trigonometry, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        question_settings.add_checkbutton(label="Algebra", variable=enable_algebra, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=history_settings, label="Score Deletion History States")
         history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
@@ -1748,6 +1871,10 @@ class Home:
         settings_menu.add_cascade(menu=timer_settings, label="Timer")
         timer_settings.add_radiobutton(label="Enabled", variable=timer, value=True, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         timer_settings.add_radiobutton(label="Disabled", variable=timer, value=False, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        question_settings = Menu(home_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
+        settings_menu.add_cascade(menu=question_settings, label="Question Topics")
+        question_settings.add_checkbutton(label="Trigonometry", variable=enable_trigonometry, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
+        question_settings.add_checkbutton(label="Algebra", variable=enable_algebra, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
         history_settings = Menu(home_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         settings_menu.add_cascade(menu=history_settings, label="Score Deletion History States")
         history_settings.add_radiobutton(label="Disabled", variable=deletion_history_states, value=0, command=lambda: self.tools.save_details(None, "Menubar", None, SETTINGS_FILE_PATH))
@@ -1863,7 +1990,7 @@ class Home:
         # Create the buttons.
         CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.tools.save_details("Scoreboard", "Home", "Temporary", None),
                       width=200, height=35, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=EW, padx=(0,5))
-        CTk.CTkButton(button_frame, text="Start", command=lambda:self.tools.save_details("Quiz", "Home", "Permanent", None),
+        CTk.CTkButton(button_frame, text="Start", command=lambda:self.tools.save_details("Quiz", "Home", "Permanent", SETTINGS_FILE_PATH),
                       width=200, height=35, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=1, row=1, sticky=EW, padx=(5,0))
         
         if deiconify_reqd == True:   # Check if deiconify is required, which is True when the main window is first created on program start. 
@@ -1876,14 +2003,14 @@ class Home:
 def main(): 
     global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DEFAULT_FONT, SEMIBOLD_DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
     global full_directory, initial_pdf_directory, INITIAL_PDF_NAME, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
-    global users, quiz_paused, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
+    global users, quiz_paused, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, enable_trigonometry, enable_algebra, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
 
     # Get the operating system name to manage functionalities in the program with limited support for multiple operating systems.
     # When run on Linux, this will return "Linux". On macOS, this will return "Darwin". On Windows, this will return "Windows".
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "3.4.0"
+    APP_VERSION = "3.5.0"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
@@ -1925,8 +2052,10 @@ def main():
     question_amount = None                  # Initialise the question_amount attribute as None.
     question_details = []                   # Create empty list for question details to be stored inside.
     settings = []                           # Create empty list for settings to be stored inside.
-    default_settings = {"enable_timer": True, "deletion_history_states": 10}             # Create a dictionary for default settings, with the "enable_timer" key set to True and the "deletion_history_states" (amount of deletion events that can be undone) key set to 10. This will be used to store the default settings for the program.
+    default_settings = {"enable_timer": True, "enable_trigonometry": True, "enable_algebra": True, "deletion_history_states": 10}  # Create a dictionary for default settings, with the "enable_timer", "enable_trigonometry", and "enable_algebra" keys set to True and the "deletion_history_states" (amount of deletion events that can be undone) key set to 10.
     timer = BooleanVar(value=default_settings["enable_timer"])                           # Create a "timer" BooleanVar global reference to control the timer checkbutton state, with the default value being dependent on the "enable_timer" key in the "default_settings" dictionary, setting the checkbutton in an on state.
+    enable_trigonometry = BooleanVar(value=default_settings["enable_trigonometry"])      # Create an "enable_trigonometry" BooleanVar global reference to control the trigonometry checkbutton state, with the default value being dependent on the "enable_trigonometry" key in the "default_settings" dictionary, setting the checkbutton in an on state.
+    enable_algebra = BooleanVar(value=default_settings["enable_algebra"])                # Create an "enabled_algebra" BooleanVar global reference to control the algebra checkbutton state, with the default value being dependent on the "enable_algebra" key in the "default_settings" dictionary, setting the checkbutton in an on state.
     deletion_history_states = IntVar(value=default_settings["deletion_history_states"])  # Create a "deletion_history_states" IntVar global reference to control the deletion history states checkbutton state, with the default value being dependent on the "deletion_history_states" key in the "default_settings" dictionary, setting the "10" checkbutton in an on state.
     history_stack = []                      # Create an empty list stack to store deleted scores, used for undo functionality.
     redo_stack = []                         # Create an empty list stack to store undone deletions, used for redo functionality.
