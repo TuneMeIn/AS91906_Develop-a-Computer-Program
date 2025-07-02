@@ -1126,15 +1126,13 @@ class Quiz:
 
     # Method for setting up the algebra questions.
     def setup_algebra(self):
-        self.active_topic = "Algebra"
-        self.current_question = question_details[self.current_index][3]  # Define the current question individually for either topic, since the question datatype is different for both topics.
-        
-        self.inner_frame = CTk.CTkFrame(self.question_frame, fg_color="#78b0f4", corner_radius=10)
-        self.inner_frame.grid(column=0, row=0, rowspan=2, padx=20)
-        self.inner_frame.columnconfigure(0, weight=0, minsize=370)
         self.inner_frame.rowconfigure(0, weight=0, minsize=55)
         self.inner_frame.rowconfigure(1, weight=0, minsize=50)
         self.inner_frame.rowconfigure(2, weight=0, minsize=60)
+
+        self.active_topic = "Algebra"
+        self.current_statement = question_details[self.current_index][2]  # Define the current statement individually for either topic, since the statement datatype is different for both topics.
+        self.current_question = question_details[self.current_index][3]   # Define the current question individually for either topic, since the question datatype is different for both topics.
 
         # Create a label for the title text.
         self.title_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_title, font=(DEFAULT_FONT, 22, "bold"), text_color=FONT_COLOUR)
@@ -1152,14 +1150,16 @@ class Quiz:
 
     # Method for setting up the trigonometry questions.
     def setup_trigonometry(self):
-        self.active_topic = "Trigonometry"
-        self.left_value = question_details[self.current_index][3][0]  # Get the first value of the "question_details" list.
-        self.bottom_value = question_details[self.current_index][3][1]  # Get the second value of the "question" list within the "question_details" list.
-        
-        self.inner_frame = CTk.CTkFrame(self.question_frame, fg_color="#78b0f4", corner_radius=10)
-        self.inner_frame.grid(column=0, row=0, rowspan=2, padx=20)
-        self.inner_frame.columnconfigure(0, weight=0, minsize=370)
         self.inner_frame.rowconfigure(0, weight=0, minsize=165)
+        self.inner_frame.rowconfigure(1, weight=0, minsize=0)
+        self.inner_frame.rowconfigure(2, weight=0, minsize=0)
+
+        self.active_topic = "Trigonometry"
+        self.current_top_statement = question_details[self.current_index][2][0]     # Get the first value of the "question_statement" list within the "question_details" list.
+        self.current_bottom_statement = question_details[self.current_index][2][1]  # Get the second value of the "question_statement" list within the "question_details" list.
+        self.hypotenuse_value = question_details[self.current_index][3][0]  # Get the first value of the "question" list within the "question_details" list.
+        self.left_value = question_details[self.current_index][3][1]        # Get the second value of the "question" list within the "question_details" list.
+        self.bottom_value = question_details[self.current_index][3][2]      # Get the third value of the "question" list within the "question_details" list.
 
         # Load the triangle image.
         triangle_img = Image.open("AppData/Images/triangle.png")
@@ -1173,9 +1173,16 @@ class Quiz:
         self.title_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_title, font=(DEFAULT_FONT, 17, "bold"), text_color=FONT_COLOUR, justify=LEFT)
         self.title_lbl.grid(column=0, row=0, sticky=NW, padx=(20,0), pady=(18,0))
         
-        # Create a label for the statement text regarding the question.
-        self.statement_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_statement, font=(SEMIBOLD_DEFAULT_FONT, 17), text_color=FONT_COLOUR, justify=LEFT)
-        self.statement_lbl.grid(column=0, row=0, sticky=SW, padx=(20,0), pady=(0,42))
+        # Create labels for the statement text regarding the question, placing the top statement after the bottom statement so that the top statement appears above the bottom statement.
+        # Having seperate labels for multiple lines allows for adjustment of the line height too.
+        self.bottom_statement_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_bottom_statement, font=(SEMIBOLD_DEFAULT_FONT, 17), text_color=FONT_COLOUR, justify=LEFT)
+        self.bottom_statement_lbl.grid(column=0, row=0, sticky=SW, padx=(20,0), pady=(0,38))
+        self.top_statement_lbl = CTk.CTkLabel(self.inner_frame, text=self.current_top_statement, font=(SEMIBOLD_DEFAULT_FONT, 17), text_color=FONT_COLOUR, justify=LEFT)
+        self.top_statement_lbl.grid(column=0, row=0, sticky=SW, padx=(20,0), pady=(0,60))
+
+        # Create a label for the triangle's hypotenuse length value.
+        self.hypotenuse_length_lbl = CTk.CTkLabel(self.triangle_lbl, text=self.hypotenuse_value, font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, anchor=W)
+        self.hypotenuse_length_lbl.place(relx=0.65, rely=0.32, anchor=W)
 
         # Create a label for the triangle's left side length value.
         self.left_length_lbl = CTk.CTkLabel(self.triangle_lbl, text=self.left_value, font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, anchor=E)
@@ -1192,36 +1199,40 @@ class Quiz:
         self.current_index = self.question_no - 1  # Remove 1 to correctly index from the "question_details" list (since lists start at index 0, but the question numbers start at 1).
         self.upcoming_topic = question_details[self.current_index][0]
         self.current_title = question_details[self.current_index][1]
-        self.current_statement = question_details[self.current_index][2]
         self.correct_answer = question_details[self.current_index][4]
         self.fake_answers = question_details[self.current_index][5]
 
         if self.active_topic == "Algebra" and self.upcoming_topic == "Trigonometry":  # Check if the current topic is algebra and the next topic is trigonometry, so that the previous algebra elements can be removed.
-            self.inner_frame.destroy()
             self.title_lbl.destroy()
             self.statement_lbl.destroy()
             self.question_lbl.destroy()
             self.setup_trigonometry()
 
         elif self.active_topic == "Trigonometry" and self.upcoming_topic == "Algebra":  # Check if the current topic is trigonometry and the next topic is algebra, so that the previous trigonometry elements can be removed.
-            self.inner_frame.destroy()
             self.title_lbl.destroy()
-            self.statement_lbl.destroy()
+            self.top_statement_lbl.destroy()
+            self.bottom_statement_lbl.destroy()
             self.triangle_lbl.destroy()
             self.left_length_lbl.destroy()
             self.bottom_length_lbl.destroy()
             self.setup_algebra()
         
         elif self.active_topic == "Algebra" and self.upcoming_topic == "Algebra":  # Check if the current topic is algebra and the next topic is algebra, meaning no elements need to be removed.
-            self.current_question = question_details[self.current_index][3]  # Define the current question individually for either topic, since the question datatype is different for both topics.
+            self.current_statement = question_details[self.current_index][2]  # Define the current statement individually for either topic, since the statement datatype is different for both topics.
+            self.current_question = question_details[self.current_index][3]   # Define the current question individually for either topic, since the question datatype is different for both topics.
             self.title_lbl.configure(text=self.current_title)
             self.statement_lbl.configure(text=self.current_statement)
             self.question_lbl.configure(text=self.current_question)
         
         elif self.active_topic == "Trigonometry" and self.upcoming_topic == "Trigonometry":  # Check if the current topic is trigonometry and the next topic is trigonometry, meaning no elements need to be removed.
-            self.left_value = question_details[self.current_index][3][0]  # Get the first value of the "question_details" list.
-            self.bottom_value = question_details[self.current_index][3][1]  # Get the second value of the "question" list within the "question_details" list.
-            self.statement_lbl.configure(text=self.current_statement)
+            self.current_top_statement = question_details[self.current_index][2][0]     # Get the first value of the "question_statement" list within the "question_details" list.
+            self.current_bottom_statement = question_details[self.current_index][2][1]  # Get the second value of the "question_statement" list within the "question_details" list.
+            self.hypotenuse_value = question_details[self.current_index][3][0]  # Get the first value of the "question" list within the "question_details" list.
+            self.left_value = question_details[self.current_index][3][1]        # Get the second value of the "question" list within the "question_details" list.
+            self.bottom_value = question_details[self.current_index][3][2]      # Get the third value of the "question" list within the "question_details" list.
+            self.top_statement_lbl.configure(text=self.current_top_statement)
+            self.bottom_statement_lbl.configure(text=self.current_bottom_statement)
+            self.hypotenuse_length_lbl.configure(text=self.hypotenuse_value)
             self.left_length_lbl.configure(text=self.left_value)
             self.bottom_length_lbl.configure(text=self.bottom_value)
         
@@ -1265,7 +1276,7 @@ class Quiz:
             elif question_topic == "Algebra":
                 letters = ["x", "y", "z", "a", "b", "c", "m", "n"]
                 question_title = "Binomial Expansion"
-                question_statement = f"Expand the following:"
+                question_statement = "Expand the following:"
                 
                 # e.g. (x - 3)(x + 2) = ?.
                 letter = random.choice(letters)
@@ -1310,11 +1321,58 @@ class Quiz:
     def medium_mode(self):
         global question_details, fake_answers
 
-        question_topic = "Algebra"  # For testing, use just the one step equation algebra question type.
         for i in range(question_amount):  # Loop through the number of questions to be generated.
-            #question_topic = random.choice(["Trigonometry", "Algebra"])
+            question_topic = random.choice(["Trigonometry", "Algebra"])
             if question_topic == "Trigonometry":
-                return
+                letter = "x"
+                question_title = "Pythagorean\nTheorem"
+                statement_s1 = "Find the length"     # Set the question statement for section 1 (top).
+                statement_s2 = "of the hypotenuse:"  # Set the question statement for section 2 (bottom).
+                question_statement = [statement_s1, statement_s2]  # Create a list of the question statement sections.
+
+                # Create a blank transparent image 160x160 in size.
+                image = Image.new("RGBA", (200, 160), (0, 0, 0, 0))  # "RGBA" for RBG with transparency, using (0, 0, 0, 0) for transparent background colur.
+                draw = ImageDraw.Draw(image)
+
+                # Coordinates of the right-angled triangle (at bottom-left corner).
+                # Triangle points: (x1, y1), (x2, y2), (x3, y3), with the zero point (0, 0) being the top left.
+                # Vertical line is from (65, 120) to (65, 20), horizontal line is from (190, 120) to (65, 120), and a hypotenuse connecting the top of the vertical line to the end of the horizontal line.
+                points = [(65, 120), (65, 20), (190, 120)]
+
+                # Draw triangle using lines.
+                draw.line([points[0], points[1]], fill="white", width=3)  # Draw a vertical line (opposite).
+                draw.line([points[2], points[0]], fill="white", width=3)  # Draw a horizontal line (base).
+                draw.line([points[1], points[2]], fill="white", width=3)  # Draw a diagonal line (hypotenuse).
+
+                # Define the points for the right-angle square, which tucks into the bottom-left corner of the triangle.
+                square_size = 15
+                square_points = [
+                    (points[0][0], points[0][1] - square_size),                # Move vertically up from the right-angle corner.
+                    (points[0][0] + square_size, points[0][1] - square_size),  # Move diagonally up-right.
+                    (points[0][0] + square_size, points[0][1])                 # Move horizontally right.
+                ]
+
+                # Draw the small square using two connected lines to represent the right-angle symbol.
+                draw.line([square_points[0], square_points[1]], fill="white", width=3)  # Top side of the square (horizontal).
+                draw.line([square_points[1], square_points[2]], fill="white", width=3)  # Right side of the square (vertical).
+
+                # Save the image.
+                image.save("AppData/Images/triangle.png")
+
+                number1 = random.randint(2, 12)  # Generate a random number between 2 and 12 for the left side of the triangle (opposite).
+                number2 = random.randint(number1, number1+12)  # Generate a random number larger than the left side with a maximum of 12 above it, for the bottom side of the triangle (base).
+                question = [letter, f"{number1} cm", f"{number2} cm"]  # Since there is no question, make the "question" a list with the two numbers associated with the triangle.
+                answer = math.sqrt(number1**2 + number2**2)
+
+                formatted_answer = f"{str(int(answer)) if answer == int(answer) else '{:.2f}'.format(answer)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
+
+                fake_answers = []
+                while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
+                    offset = random.choice([-1, 1]) * random.randint(2, 10)  # Generate a random offset between -2 or 2 and -10 or 10.
+                    fake = answer + offset
+                    formatted_fake = f"{str(int(fake)) if fake == int(fake) else '{:.2f}'.format(fake)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
+                    if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
+                        fake_answers.append(formatted_fake)  # Append each formatted fake answer to the fake answers list.
             
             elif question_topic == "Algebra":
                 letters = ['x', 'y', 'z', 'a', 'b', 'c', 'm', 'n']
@@ -1371,7 +1429,9 @@ class Quiz:
             if question_topic == "Trigonometry":
                 letter = None
                 question_title = "Area of Triangles"
-                question_statement = f"Find the area\nof the triangle:"
+                statement_s1 = "Find the area"     # Set the question statement for section 1 (top).
+                statement_s2 = "of the triangle:"  # Set the question statement for section 2 (bottom).
+                question_statement = [statement_s1, statement_s2]  # Create a list of the question statement sections.
 
                 # Create a blank transparent image 160x160 in size.
                 image = Image.new("RGBA", (200, 160), (0, 0, 0, 0))  # "RGBA" for RBG with transparency, using (0, 0, 0, 0) for transparent background colur.
@@ -1404,8 +1464,8 @@ class Quiz:
 
                 number1 = random.randint(2, 12)  # Generate a random number between 2 and 12 for the left side of the triangle (opposite).
                 number2 = random.randint(number1, number1+12)  # Generate a random number larger than the left side with a maximum of 12 above it, for the bottom side of the triangle (base).
-                question = [f"{number1} cm", f"{number2} cm"]  # Since there is no question, make the "question" a list with the two numbers associated with the triangle.
-                answer = (number2*number1)/2
+                question = [letter, f"{number1} cm", f"{number2} cm"]  # Since there is no question, make the "question" a list with the two numbers associated with the triangle.
+                answer = (number1*number2)/2
 
                 formatted_answer = f"{str(int(answer)) if answer == int(answer) else '{:.2f}'.format(answer)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
 
@@ -1421,7 +1481,7 @@ class Quiz:
                 letters = ["x", "y", "z", "a", "b", "c", "m", "n"]
                 letter = random.choice(letters)
                 question_title = "Like Terms"
-                question_statement = f"Simplify the following:"
+                question_statement = "Simplify the following:"
                 
                 question_type = random.randint(0, 1)
                 if question_type == 0:
@@ -1579,9 +1639,12 @@ class Quiz:
         self.question_frame.rowconfigure(0, weight=0, minsize=50)
         self.question_frame.rowconfigure(1, weight=0, minsize=155)
 
+        self.inner_frame = CTk.CTkFrame(self.question_frame, fg_color="#78b0f4", corner_radius=10)
+        self.inner_frame.grid(column=0, row=0, rowspan=2, padx=20)
+        self.inner_frame.columnconfigure(0, weight=0, minsize=370)
+
         self.upcoming_topic = question_details[self.current_index][0]
         self.current_title = question_details[self.current_index][1]
-        self.current_statement = question_details[self.current_index][2]
         self.correct_answer = question_details[self.current_index][4]
         self.fake_answers = question_details[self.current_index][5]
 
@@ -1820,7 +1883,7 @@ def main():
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "3.3.0"
+    APP_VERSION = "3.4.0"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
