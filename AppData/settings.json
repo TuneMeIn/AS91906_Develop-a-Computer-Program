@@ -1,4 +1,6 @@
 {
     "enable_timer": true,
+    "enable_trigonometry": true,
+    "enable_algebra": true,
     "deletion_history_states": 10
 }
