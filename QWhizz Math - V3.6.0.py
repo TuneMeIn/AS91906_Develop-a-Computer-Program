@@ -105,7 +105,7 @@ class Tools:
 
 
     # Method for clearing all widgets or clearing specified widgets (column, row).
-    def clear_widget(self, procedure, all_widgets, column, row, command):
+    def clear_widget(self, procedure, all_widgets, element, column, row, command):
         if command != None: command()  # Go to the specified procedure from passed command if it is specified.
         if all_widgets == True:
             # Clear all page content
@@ -113,8 +113,8 @@ class Tools:
                 widget.destroy()
             if procedure != None: procedure()  # Go to the specified procedure from button command if it is specified.
         elif all_widgets == False:
-            # Find all widgets in the specified row and column.
-            for widget in main_window.grid_slaves(column=column, row=row):
+            # Find all widgets in the specified row and column of a specified element.
+            for widget in element.grid_slaves(column=column, row=row):
                 widget.destroy()  # Destroy the widgets occupying the specified space.
 
 
@@ -297,13 +297,90 @@ class Tools:
                     return
 
 
+    # Function for validating user details and making sure there are no invalid entries inside any entry boxes.
+    def validate_user_details(self):
+        global overwrite_score, username
+        overwrite_score = False
+        warning_messages = []
+        label = False
+        invalid_entry = False
+        adjust_entry = False
+        
+        # Clear any previous error labels by using the "clear_widget" method.
+        self.clear_widget(None, False, self.home.home_frame1, 2, 0, None)
+        
+        if username == "":  # Check if the username is empty.
+            warning_messages.append("is required and cannot be left blank")  # Show a warning message if the username is empty.
+            label = "Required"
+            invalid_entry = True
+            adjust_entry = ""
+
+        else:
+            if len(username) < 2:  # Check if the username is shorter than 2 characters.
+                warning_messages.append("cannot be shorter than two characters")  # Show a warning message if the username is shorter than 3 characters.
+                label = "Invalid Entry"
+                invalid_entry = True
+                adjust_entry = username
+
+            if not any(char.isalpha() for char in username):  # Check if the username contains at least one alphabetical character.
+                warning_messages.append("must contain at least one alphabetical character")  # Show a warning message if the username does not contain at least one alphabetical character.
+                label = "Invalid Entry"
+                invalid_entry = True
+                adjust_entry = username
+
+            if len(username) > 20:  # Check if the username is longer than 20 characters.
+                warning_messages.append("cannot be longer than twenty characters.\n\nYour entry has been automatically shortened to twenty characters")  # Show a warning message if the username is longer than 20 characters.
+                invalid_entry = True
+                adjust_entry = username[:20]
+
+            if " " in username:  # Check if the username contains any spaces.
+                response1 = messagebox.askyesno("Invalid Entry", "Username cannot contain any spaces. Do you want to replace all spaces inside the username with underscores?")
+                if response1 == True:
+                    if invalid_entry != True: invalid_entry = False  # Allow the program to continue to the quiz only if no invalid entry is detected prior to replacing the spaces with underscores.
+                    adjust_entry = username.replace(" ", "_")  # Replace the spaces inside the username with underscores.
+                    username = adjust_entry
+                else:
+                    invalid_entry = True  # Prevent the program from continuing to the quiz after removing the spaces from the username, so the user can adjust the username to their liking.
+                    adjust_entry = username.replace(" ", "")   # Remove the spaces from the username.
+
+        if invalid_entry == True:
+            if adjust_entry != False:
+                if self.home.entry_type == "CTkEntry":
+                    self.home.username_entry.insert(0, adjust_entry)
+                elif self.home.entry_type == "CTkComboBox":
+                    self.home.username_entry.set(adjust_entry)
+            if label != False:
+                CTk.CTkLabel(self.home.home_frame1, text=label, text_color="red", font=(DEFAULT_FONT, 12)).grid(column=2, row=0, sticky=W, padx=(5,0), pady=(20,0))
+            if warning_messages != []:
+                messagebox.showwarning("Invalid Entry", f"Username " + " and ".join(warning_messages) + ".")  # Show a warning message box if the username is invalid, combining multiple warning messages into a single message if applicable.
+            warning_messages.clear()
+            return "Invalid Entry"
+        else:
+            if adjust_entry != False:
+                if self.home.entry_type == "CTkEntry":
+                    self.home.username_entry.insert(0, adjust_entry)
+                elif self.home.entry_type == "CTkComboBox":
+                    self.home.username_entry.set(adjust_entry)
+            # Check if a user already exists with the same username and difficulty in the "users" list.
+            for user in users:
+                if user[1].lower() == username.lower() and user[2] == difficulty:  # Use ".lower()" to ignore case sensitivity when comparing the existing usernames with the entered username by making them both lowercase.
+                    response2 = messagebox.askyesno("Overwrite Score", "A score already exists for this username (case insensitive) and difficulty level. Continuing will replace this score with your final score after completion of the quiz. Are you sure you want to continue?")
+                    if response2 == True:
+                        overwrite_score = True
+                        return "Valid Entry"
+                    else:
+                        return "Invalid Entry"
+            return "Valid Entry"
+            
+
+
     # Method for saving details specific to the specified window.
     def save_details(self, procedure, origin, scenario, file_dir):
         global ref_number, username, difficulty_num, question_amount, settings, data_loaded, enable_trigonometry, enable_algebra, use_trigonometry_questions, use_algebra_questions
         
         if origin == "Home":
             if scenario == "Temporary" or scenario == "Permanent":
-                username = self.home.username_entry.get()                # Get the username entry widget value.
+                username = self.home.username_entry.get().strip()        # Get the username entry widget value and remove any leading or trailing spaces using ".strip()".
                 difficulty_num = self.home.difficulty_slider.get()       # Get the difficulty slider value.
                 question_amount = int(self.home.questions_slider.get())  # Get the questions slider value.
             
@@ -315,7 +392,7 @@ class Tools:
                 # Check if the maximum number of unique reference numbers has been reached.
                 if len(existing_ref_numbers) >= 9000:  # Check if 9000 possible unique 4-digit ref numbers from 1000 to 9999 have been generated.
                     messagebox.showwarning("Maximum Scores Reached", "No more unique reference numbers can be generated.\nPlease delete old user scores to add new ones.")
-                    self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go back to the home page.
+                    self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go back to the home page.
                     return
                 else:
                     while True:
@@ -324,10 +401,12 @@ class Tools:
                             break
             
             if procedure == "Quiz":
+                if self.validate_user_details()  == "Invalid Entry": return  # Run the "validate_user_details" function to ensure that the user details are valid before starting the quiz, otherwise return to home method.
+
                 use_trigonometry_questions = enable_trigonometry.get()
                 use_algebra_questions = enable_algebra.get()
                 if use_trigonometry_questions == False and use_algebra_questions == False:
-                    response1 = messagebox.askyesno("No Question Topics Selected", "The quiz cannot be started until a question topic is selected from the settings menu.\n\nDo you want to enable all question topics?", icon="warning")
+                    response1 = messagebox.askyesno("No Question Topics Selected", "The quiz cannot be started until a question topic is selected from the settings menu. Do you want to enable all question topics?", icon="warning")
                     if response1 == False: return
                     else:
                         enable_algebra.set(True)
@@ -344,9 +423,9 @@ class Tools:
                         except Exception as e:                       # Error control for any other exceptions that may occur.
                             messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'settings.json'.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
                             return
-                self.clear_widget(lambda: self.quiz.setup_quiz(None), True, None, None, None)
+                self.clear_widget(lambda: self.quiz.setup_quiz(None), True, None, None, None, None)
             elif procedure == "Scoreboard":
-                self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
+                self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
             else:
                 return  # If the procedure is not "Quiz" or "Scoreboard", do nothing and return.
 
@@ -400,7 +479,7 @@ class Tools:
     
         if selections == "all":
             if users == []:  # Check if the "users" list is empty.
-                response1 = messagebox.askyesno("No Scores Recorded", "There are no recorded scores to print.\nWould you still like to print out a blank scoreboard table?")
+                response1 = messagebox.askyesno("No Scores Recorded", "There are no recorded scores to print. Would you still like to print out a blank scoreboard table?")
                 if response1 == False:
                     return
             else:
@@ -487,7 +566,7 @@ class Tools:
                         users = []
                         redo_stack.clear()  # Clear the "redo_stack" list to prevent any redo actions directly after deletion.
                         self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
-                        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
+                        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
                         messagebox.showinfo("Scores Deleted", "All recorded scores have been deleted.")
                     else:
                         return
@@ -520,7 +599,7 @@ class Tools:
                             users_to_delete.clear()  # Clear the list of users to delete.
                             
                             self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
-                            self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
+                            self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
                             messagebox.showinfo("Scores Deleted", f"The selected {words[0]} {words[1]} been deleted.")
                         else:
                             return
@@ -547,7 +626,7 @@ class Tools:
             users.insert(index, user)
         
         self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
-        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
+        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
 
 
     # Method for redoing the deletion of scores that were previously undone.
@@ -565,7 +644,7 @@ class Tools:
             del users[index]  # Delete the user from the "users" list at the specified index.
         
         self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
-        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)
+        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
 
 
     # Method for resetting details specific to the specified window.
@@ -784,7 +863,7 @@ class Scoreboard:
         # Create the buttons.
         CTk.CTkButton(top_frame1, text="Delete", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.tools.delete_details(self.sel_reference_numbers),
                       width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=1, row=0, sticky=EW, padx=(0,5), pady=(0,5))
-        CTk.CTkButton(top_frame1, text="Home", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.tools.clear_widget(self.home.setup_homepage, True, None, None, self.tools.unbind_keys(self.binded_keys)),
+        CTk.CTkButton(top_frame1, text="Home", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.tools.clear_widget(self.home.setup_homepage, True, None, None, None, self.tools.unbind_keys(self.binded_keys)),
                       width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=2, row=0, sticky=EW, padx=(5,0), pady=(0,5))
         CTk.CTkButton(top_frame1, text="View Answers", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR,
                       width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=1, row=1, sticky=EW, padx=(0,5), pady=(5,0))
@@ -900,14 +979,22 @@ class Completion:
 
     # Method for submitting the quiz details to the "users" list and saving them to the JSON file (saving is done in the "save_details" method within the "Tools" class).
     def submit_details(self):
-        global ref_number, username, difficulty, question_amount, users
+        global ref_number, username, difficulty, question_amount, users, overwrite_score
         
         self.quiz.final_score = f"{self.quiz.score}/{question_amount}"
         if timer.get() == True:
             self.time = self.quiz.total_time
         else:
             self.time = "Disabled"
-        users.append([ref_number, username, difficulty, question_amount, self.time, self.quiz.final_score])  # Add the next user and their quiz details to the "users" list.
+        if overwrite_score == True:
+            # Check if a user already exists with the same username and difficulty in the "users" list.
+            for index, user in enumerate(users):
+                if user[1].lower() == username.lower() and user[2] == difficulty:  # Use ".lower()" to ignore case sensitivity when comparing the existing usernames with the entered username by making them both lowercase.
+                    users[index] = [ref_number, username, difficulty, question_amount, self.time, self.quiz.final_score]  # Replace the existing user details with the new ones.
+                    overwrite_score = False  # Reset the "overwrite_score" flag.
+                    break
+        else:
+            users.append([ref_number, username, difficulty, question_amount, self.time, self.quiz.final_score])  # Add the next user and their quiz details to the "users" list.
         self.tools.save_details(None, "Completion", None, SCOREBOARD_FILE_PATH)  # Save the details to the JSON file.
         self.setup_completion()
 
@@ -1077,7 +1164,7 @@ class Quiz:
                 use_trigonometry_questions = enable_trigonometry.get()
                 use_algebra_questions = enable_algebra.get()
                 if use_trigonometry_questions == False and use_algebra_questions == False:
-                    response1 = messagebox.askyesno("No Question Topics Selected", "A new quiz cannot be started until a question topic is selected from the settings menu.\n\nDo you want to enable all question topics?", icon="warning")
+                    response1 = messagebox.askyesno("No Question Topics Selected", "A new quiz cannot be started until a question topic is selected from the settings menu. Do you want to enable all question topics?", icon="warning")
                     if response1 == False: return
                     else: self.tools.save_details("New Quiz", "Quiz", None, SETTINGS_FILE_PATH)
             self.tools.unbind_keys(self.binded_keys)
@@ -1102,15 +1189,15 @@ class Quiz:
             self.question_no = 1
             self.score = 0
             if command == "Home":
-                self.tools.clear_widget(self.home.setup_homepage, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the home page.
+                self.tools.clear_widget(self.home.setup_homepage, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the home page.
             elif command == "Scoreboard":
-                self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the scoreboard page.
+                self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the scoreboard page.
         elif command == "New Quiz":
             self.tools.reset_details("Quiz", "New")  # Pass "None" action so that all quiz details are cleared.
-            self.tools.clear_widget(lambda: self.setup_quiz(None), True, None, None, None)
+            self.tools.clear_widget(lambda: self.setup_quiz(None), True, None, None, None, None)
         elif command == "Restart Quiz":
             self.tools.reset_details("Quiz", "Restart")  # Pass "restart" action so that the question details aren't cleared.
-            self.tools.clear_widget(lambda: self.setup_quiz("Restart Quiz"), True, None, None, None)
+            self.tools.clear_widget(lambda: self.setup_quiz("Restart Quiz"), True, None, None, None, None)
 
 
     def pause_quiz(self):
@@ -1350,7 +1437,7 @@ class Quiz:
         else:
             self.stop_timer(None, "Quiz")
             self.tools.reset_details("Quiz", None)
-            self.tools.clear_widget(self.completion.submit_details, True, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the completion page.
+            self.tools.clear_widget(self.completion.submit_details, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the completion page.
 
 
     def hard_mode(self):
@@ -1371,26 +1458,26 @@ class Quiz:
                 formatted_angle = f"{angle_deg}\u00B0"
                 question_title = "Trigonometric\nRatios"
 
-                question_type = random.randint(0, 2)  # Generate a random number between 0 and 2 for the question type, which determines what sides of the triangle the two numbers are placed on.
+                question_type = random.randint(0, 2)  # Generate a random number between 0 and 2 for the question type, which determines what side of the triangle the number is placed on.
                 side = "opposite" if question_type == 0 else "hypotenuse" if question_type == 1 else "adjacent"
                 statement_s1 = "Find the length"  # Set the question statement for section 1 (top).
                 statement_s2 = f"of the {side}:"  # Set the question statement for section 2 (bottom).
                 question_statement = [statement_s1, statement_s2]  # Create a list of the question statement sections.
 
                 # Question list order is [hypotenuse, left side, bottom side, angle].
-                # Make the hypotenuse the known side of the triangle, and the opposite the unknown side.
+                # Make the hypotenuse the known side of the triangle, and the left side (opposite) the unknown side.
                 if question_type == 0:
-                    number1 = random.randint(6, 24)                            # Generate a random number between 5 and 20 for the hypotenuse of the triangle.
+                    number1 = random.randint(6, 24)                            # Generate a random number between 6 and 24 for the hypotenuse of the triangle. This number has a higher threshold since the hypotenuse is always the longest side in right-angled triangles.
                     question = [f"{number1} cm", letter, "", formatted_angle]  # Since there is no question, make the "question" a list with the values associated with the triangle.
                     answer = number1 * math.sin(angle_rad)                     # Calculate the left side (opposite) using the sine of the angle.
                 # Make the bottom side (adjacent) the known side of the triangle, and the hypotenuse the unknown side.
                 elif question_type == 1:
-                    number1 = random.randint(4, 16)                            # Generate a random number between 2 and 12 for the left side of the triangle (opposite).
+                    number1 = random.randint(4, 16)                            # Generate a random number between 4 and 16 for the left side of the triangle (opposite).
                     question = [letter, "", f"{number1} cm", formatted_angle]  # Since there is no question, make the "question" a list with the values associated with the triangle.
                     answer = number1 / math.cos(angle_rad)                     # Calculate the hypotenuse using the cosine of the angle.
                 # Make the left side (opposite) the known side of the triangle, and the bottom side (adjacent) the unknown side.
                 elif question_type == 2:
-                    number1 = random.randint(4, 16)                            # Generate a random number between 2 and 12 for the bottom side of the triangle (adjacent).
+                    number1 = random.randint(4, 16)                            # Generate a random number between 4 and 16 for the bottom side of the triangle (adjacent).
                     question = ["", f"{number1} cm", letter, formatted_angle]  # Since there is no question, make the "question" a list with the values associated with the triangle.
                     answer = number1 / math.tan(angle_rad)                     # Calculate the bottom side (adjacent) using the tangent of the angle.
 
@@ -1398,10 +1485,10 @@ class Quiz:
 
                 fake_answers = []
                 while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
-                    if answer == int(answer):
-                        offset = random.choice([-1, 1]) * random.randint(1, 6)  # Generate a random offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
+                    if answer == int(answer):  # Check if the answer is an integer.
+                        offset = random.randint(1, 6)  # Generate a random offset between 1 and 6.
                     else:
-                        offset = random.choice([-1, 1]) * random.uniform(1, 6)  # Generate a random decimal offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
+                        offset = random.uniform(1, 6)  # Generate a random decimal offset between 1 and 6.
                     fake = answer + offset
                     formatted_fake = f"{str(int(fake)) if fake == int(fake) else '{:.2f}'.format(fake)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
                     if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
@@ -1503,10 +1590,10 @@ class Quiz:
 
                 fake_answers = []
                 while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
-                    if answer == int(answer):
-                        offset = random.choice([-1, 1]) * random.randint(1, 6)  # Generate a random offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
+                    if answer == int(answer):  # Check if the answer is an integer.
+                        offset = random.randint(1, 6)  # Generate a random offset between 1 and 6.
                     else:
-                        offset = random.choice([-1, 1]) * random.uniform(1, 6)  # Generate a random decimal offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
+                        offset = random.uniform(1, 6)  # Generate a random decimal offset between 1 and 6.
                     fake = answer + offset
                     formatted_fake = f"{str(int(fake)) if fake == int(fake) else '{:.2f}'.format(fake)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
                     if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
@@ -1521,34 +1608,34 @@ class Quiz:
                 question_type = random.randint(0, 3)
                 if question_type == 0:
                     # e.g. a - 2 = 4 >> a = 6.
-                    number1 = random.randint(1, 20)
-                    number2 = random.randint(1, 50)
+                    number1 = random.randint(1, 20)  # Generate a random number between 1 and 20.
+                    number2 = random.randint(1, 50)  # Generate a random number between 1 and 50.
                     question = f"{letter} - {number1} = {number2}"
                     answer = number2+number1
                 elif question_type == 1:
                     # e.g. a + 2 = 4 >> a = 2.
-                    number1 = random.randint(1, 20)
-                    number2 = random.randint(1, 50)
+                    number1 = random.randint(1, 20)  # Generate a random number between 1 and 20.
+                    number2 = random.randint(1, 50)  # Generate a random number between 1 and 50.
                     question = f"{letter} + {number1} = {number2}"
                     answer = number2-number1
                 elif question_type == 2:
                     # e.g. 2a = 4 >> a = 2.
-                    number1 = random.randint(1, 10)
-                    number2 = random.randint(number1, number1+10)  # Ensure that the second number is greater than the first number, by making the minimum value as "number1" and the maximum value as "number1" + 10.
+                    number1 = random.randint(1, 10)  # Generate a random number between 1 and 10, since division is involved and a lower number will help maintain easiness.
+                    number2 = random.randint(number1, number1+10)  # Ensure that the second number to divide is greater than the first number, by making the minimum value as "number1" and the maximum value as "number1" + 10.
                     question = f"{number1}{letter} = {number2}"
                     answer = number2/number1
                 elif question_type == 3:
                     # e.g. a / 2 = 4 >> a = 8.
-                    number1 = random.randint(1, 12)
-                    number2 = random.randint(1, 12)
+                    number1 = random.randint(1, 12)  # Generate a random number between 1 and 12, since multiplication is involved and a lower number will help maintain easiness.
+                    number2 = random.randint(1, 12)  # Generate a random number between 1 and 12, since multiplication is involved and a lower number will help maintain easiness.
                     question = f"{letter} / {number1} = {number2}"
                     answer = number2*number1
 
                 formatted_answer = str(int(answer)) if answer == int(answer) else "{:.2f}".format(answer)  # Format the answer to 2 decimal places if it is a float (decimal number).
 
                 fake_answers = []
-                while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
-                    if answer == int(answer):
+                while len(fake_answers) < 3:   # Generate 3 fake answers for each question.
+                    if answer == int(answer):  # Check if the answer is an integer.
                         offset = random.choice([-1, 1]) * random.randint(1, 8)  # Generate a random offset between 2 and 10, then multiply it by -1 or 1 to create a random number between -10 and 10.
                     else:
                         offset = random.choice([-1, 1]) * random.uniform(1, 6)  # Generate a random decimal offset between 2 and 8, then multiply it by -1 or 1 to create a random number between -8 and 8.
@@ -1590,11 +1677,11 @@ class Quiz:
                 formatted_answer = f"{str(int(answer)) if answer == int(answer) else '{:.2f}'.format(answer)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
 
                 fake_answers = []
-                while len(fake_answers) < 3:  # Generate 3 fake answers for each question.
-                    if answer == int(answer):
-                        offset = random.choice([-1, 1]) * random.randint(1, 6)  # Generate a random offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
+                while len(fake_answers) < 3:   # Generate 3 fake answers for each question.
+                    if answer == int(answer):  # Check if the answer is an integer.
+                        offset = random.randint(1, 6)  # Generate a random offset between 1 and 6.
                     else:
-                        offset = random.choice([-1, 1]) * random.uniform(1, 6)  # Generate a random decimal offset between 1 and 6, then multiply it by -1 or 1 to create a random number between -6 and 6.
+                        offset = random.uniform(1, 6)  # Generate a random decimal offset between 1 and 6.
                     fake = answer + offset
                     formatted_fake = f"{str(int(fake)) if fake == int(fake) else '{:.2f}'.format(fake)} cm"  # Format the answer to 2 decimal places if it is a float (decimal number).
                     if formatted_fake != formatted_answer and formatted_fake not in fake_answers:  # Check if the formatted fake answer is different from the correct answer and not already in the list of fake answers.
@@ -1609,16 +1696,16 @@ class Quiz:
                 question_type = random.randint(0, 1)
                 if question_type == 0:
                     # e.g. 2x - 4x - 6x = ?.
-                    number1 = random.randint(1, 12)
-                    number2 = random.randint(1, 12)
-                    number3 = random.randint(1, 12)
+                    number1 = random.randint(1, 12)  # Generate a random number between 1 and 12.
+                    number2 = random.randint(1, 12)  # Generate a random number between 1 and 12.
+                    number3 = random.randint(1, 12)  # Generate a random number between 1 and 12.
                     question = f"{number1 if number1 != 1 else ''}{letter} - {number2 if number2 != 1 else ''}{letter} - {number3 if number3 != 1 else ''}{letter} = ?"  # If any numbers are 1 then only include the letter beside those numbers.
                     answer = number1-number2-number3
                 elif question_type == 1:
                     # e.g. 2x + 4x + 6x = ?.
-                    number1 = random.randint(1, 12)
-                    number2 = random.randint(1, 12)
-                    number3 = random.randint(1, 12)
+                    number1 = random.randint(1, 12)  # Generate a random number between 1 and 12.
+                    number2 = random.randint(1, 12)  # Generate a random number between 1 and 12.
+                    number3 = random.randint(1, 12)  # Generate a random number between 1 and 12.
                     question = f"{number1 if number1 != 1 else ''}{letter} + {number2 if number2 != 1 else ''}{letter} + {number3 if number3 != 1 else ''}{letter} = ?"  # If any numbers are 1 then only include the letter beside those numbers.
                     answer = number1+number2+number3
 
@@ -1921,47 +2008,53 @@ class Home:
         logo_canvas.image = logo
 
         # Set up a content frame to place the main home elements inside.
-        home_frame1 = CTk.CTkFrame(self.main_content_frame, fg_color=FRAME_FG, corner_radius=10)
-        home_frame1.grid(column=0, row=1, sticky=EW, padx=20, pady=(20,5))
+        self.home_frame1 = CTk.CTkFrame(self.main_content_frame, fg_color=FRAME_FG, corner_radius=10)
+        self.home_frame1.grid(column=0, row=1, sticky=EW, padx=20, pady=(20,5))
 
         # Set width for columns 0-2 (3 total) in home frame 1. Total minimum column width is 410px.
-        home_frame1.columnconfigure(0, weight=0, minsize=100)
-        home_frame1.columnconfigure(1, weight=0, minsize=210)
-        home_frame1.columnconfigure(2, weight=0, minsize=100)
+        self.home_frame1.columnconfigure(0, weight=0, minsize=100)
+        self.home_frame1.columnconfigure(1, weight=0, minsize=210)
+        self.home_frame1.columnconfigure(2, weight=0, minsize=100)
 
         # Create the labels to be placed next to their relevant entry boxes.
-        CTk.CTkLabel(home_frame1, text="Username", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=0, sticky=E, padx=(0,5), pady=(20,0))
-        CTk.CTkLabel(home_frame1, text="Difficulty", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=E, padx=(0,5), pady=15)
-        CTk.CTkLabel(home_frame1, text="Questions", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=2, sticky=E, padx=(0,5), pady=(0,20))
+        CTk.CTkLabel(self.home_frame1, text="Username", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=0, sticky=E, padx=(0,5), pady=(20,0))
+        CTk.CTkLabel(self.home_frame1, text="Difficulty", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=E, padx=(0,5), pady=15)
+        CTk.CTkLabel(self.home_frame1, text="Questions", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=2, sticky=E, padx=(0,5), pady=(0,20))
 
-        self.difficulty_lbl = CTk.CTkLabel(home_frame1, text="", font=(DEFAULT_FONT, 12, "bold"), text_color=FONT_COLOUR)     # Create an empty placeholder label to display the difficulty level.
+        self.difficulty_lbl = CTk.CTkLabel(self.home_frame1, text="", font=(DEFAULT_FONT, 12, "bold"), text_color=FONT_COLOUR)     # Create an empty placeholder label to display the difficulty level.
         self.difficulty_lbl.grid(column=2, row=1, sticky=W, padx=(5,0), pady=15)
-        self.question_amnt_lbl = CTk.CTkLabel(home_frame1, text="", font=(DEFAULT_FONT, 12, "bold"), text_color=FONT_COLOUR)  # Create an empty placeholder label to display the number of questions.
+        self.question_amnt_lbl = CTk.CTkLabel(self.home_frame1, text="", font=(DEFAULT_FONT, 12, "bold"), text_color=FONT_COLOUR)  # Create an empty placeholder label to display the number of questions.
         self.question_amnt_lbl.grid(column=2, row=2, sticky=W, padx=(5,0), pady=(0,20))
 
         # Set up the username entry, which is either an entry box if there are no usernames saved, or a combo box if there are usernames saved. This prevents the user from trying to open a combo box dropdown when there are no usernames saved.
-        usernames = [user[1] for user in users]
-        if usernames == []:  # Check if the usernames list is empty
-            self.username_entry = CTk.CTkEntry(home_frame1, fg_color="#73ace0", border_color="#6aa5db", text_color=FONT_COLOUR, corner_radius=10)
+        display_usernames = [user[1] for user in users]  # Get the usernames from the users list.
+        truncated_usernames = [name[:12] + "..." if len(name) > 13 else name for name in display_usernames]  # For each username in "display_usernames", truncate the username to 12 characters if it is longer than 13 characters, otherwise use the full username.
+        processed = []  # Create an empty list to store one instance of each username, ensuring that there are no duplicates.
+        # Create a list of usernames that are unique regardless of casing (e.g., "Jack" and "JACK" are treated as the same username - "jack"), using ".lower" so that all pr usernames are converted to lowercase.
+        # Only the first occurrence of each lowercase name is included in "unique_display_usernames", as all lowercase versions are added to the "processed" list to find duplicates.
+        unique_display_usernames = [name for name in truncated_usernames if not (name.lower() in processed or processed.append(name.lower()))]  # Usernames included in "unique_display_usernames" are ones that are not already in the "processed" list. If they aren't in the "processed" list, add them to the list to prevent future duplicates.
+
+        if unique_display_usernames == []:  # Check if the usernames list is empty
+            self.username_entry = CTk.CTkEntry(self.home_frame1, fg_color="#73ace0", border_color="#6aa5db", text_color=FONT_COLOUR, corner_radius=10)
             self.username_entry.insert(0, "")
             self.entry_type = "CTkEntry"
         else:
             # Setup combo box and sliders (scales).
-            self.username_entry = CTk.CTkComboBox(home_frame1, fg_color="#73ace0", border_color="#6aa5db", button_color="#6aa5db", button_hover_color="#5997d5", text_color=FONT_COLOUR, corner_radius=10)
+            self.username_entry = CTk.CTkComboBox(self.home_frame1, fg_color="#73ace0", border_color="#6aa5db", button_color="#6aa5db", button_hover_color="#5997d5", text_color=FONT_COLOUR, corner_radius=10)
             self.username_entry.set("")
             self.entry_type = "CTkComboBox"
             # Attach the scrollable dropdown library to the username entry combo box.
             self.dropdown = CTkScrollableDropdown(self.username_entry, values=[""], justify="left", button_color="transparent", fg_color="#73ace0", bg_color=FRAME_FG, frame_border_color="#6aa5db", frame_corner_radius=10,
                                                   scrollbar_button_color="#5997d5", scrollbar_button_hover_color="#497caf", hover_color=MENU_HOVER, text_color=FONT_COLOUR, autocomplete=True)
-            self.dropdown.configure(values=usernames)  # Set the values of the combo box to the usernames of the users in the users list (user[1])
+            self.dropdown.configure(values=unique_display_usernames)  # Set the values of the combo box to the usernames of the users in the users list (user[1])
             # CTkScrollableDropdown library utilises "transient()" to stay on top, so after destroying the combo box (by going to a new page - Scoreboard or Quiz) and creating it again (going back to the Home page), the main window needs to be focused. 
             # If this isn't done, the focus will go back to the dropdown and prevent interaction with the combo box entry section, stopping users from being able to type inside it.
             main_window.focus_force()  # Focus the main window to ensure interaction with the combo box entry section.
         self.username_entry.grid(column=1, row=0, padx=5, pady=(20,0), sticky=EW)
 
-        self.difficulty_slider = CTk.CTkSlider(home_frame1, from_=0, to=2, number_of_steps=2, command=lambda value: self.slider_label_update("S1", value), orientation=HORIZONTAL, fg_color="#73ace0", button_color="#4d97e8")
+        self.difficulty_slider = CTk.CTkSlider(self.home_frame1, from_=0, to=2, number_of_steps=2, command=lambda value: self.slider_label_update("S1", value), orientation=HORIZONTAL, fg_color="#73ace0", button_color="#4d97e8")
         self.difficulty_slider.grid(column=1, row=1, padx=5, pady=15, sticky=EW)
-        self.questions_slider = CTk.CTkSlider(home_frame1, from_=5, to=35, number_of_steps=30, command=lambda value: self.slider_label_update("S2", value), orientation=HORIZONTAL, progress_color="#4d97e8", fg_color="#73ace0", button_color="#4d97e8", button_hover_color="#3b83c4")
+        self.questions_slider = CTk.CTkSlider(self.home_frame1, from_=5, to=35, number_of_steps=30, command=lambda value: self.slider_label_update("S2", value), orientation=HORIZONTAL, progress_color="#4d97e8", fg_color="#73ace0", button_color="#4d97e8", button_hover_color="#3b83c4")
         self.questions_slider.grid(column=1, row=2, padx=5, pady=(0,20), sticky=EW)
         
         # Update the value of the entry box and the sliders (scales) with the previously recorded values (used for going from scoreboard back to homepage).
@@ -2003,14 +2096,14 @@ class Home:
 def main(): 
     global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DEFAULT_FONT, SEMIBOLD_DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
     global full_directory, initial_pdf_directory, INITIAL_PDF_NAME, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
-    global users, quiz_paused, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, enable_trigonometry, enable_algebra, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
+    global users, overwrite_score, quiz_paused, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, enable_trigonometry, enable_algebra, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
 
     # Get the operating system name to manage functionalities in the program with limited support for multiple operating systems.
     # When run on Linux, this will return "Linux". On macOS, this will return "Darwin". On Windows, this will return "Windows".
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "3.5.0"
+    APP_VERSION = "3.6.0"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
@@ -2046,6 +2139,7 @@ def main():
 
     # Initialise global lists and variables.
     users = []                              # Create empty list for user details and their quiz results to be stored inside.
+    overwrite_score = True                  # Initialise a flag to track whether a score should be overwritten or not if a user already exists with the same username and difficulty.
     quiz_paused = False                     # Initialise a flag to track whether the quiz is paused or not.
     username = None                         # Initialise the username attribute as None.
     difficulty_num = None                   # Initialise the difficulty_num attribute as None.
