@@ -200,10 +200,10 @@ class Tools:
                     for index, details in enumerate(users):
                         if len(details) != 7:  # Check all entries to make sure they each contain 7 elements.
                             error_type = 1
-                            response2 = messagebox.askyesno("Invalid Data", f"The {file_name} file contains invalid data:\nEntry #{index+1} is incomplete (expected 7 elements, got {len(details)}).\n\nWould you like to remove this entry?")                 
+                            response2 = messagebox.askyesno("Invalid Data", f"The {file_name} file contains invalid data:\nEntry #{index+1} is invalid (expected 7 elements, got {len(details)}).\n\nWould you like to remove this entry?")                 
                         elif len(details[6]) != int(details[3]):  # Check if the number of saved questions is less than the recommended number of questions in any user's saved quiz.
                             error_type = 2
-                            response2 = messagebox.askyesno("Invalid Data", f"The {file_name} file contains invalid data:\nEntry #{index+1} has an incomplete list of saved questions (expected {details[3]} questions, got {len(details[6])}).\n\nWould you like to remove this entry?")
+                            response2 = messagebox.askyesno("Invalid Data", f"The {file_name} file contains invalid data:\nEntry #{index+1} has an invalid list of saved questions (expected {details[3]} questions, got {len(details[6])}).\n\nWould you like to remove this entry?")
                         
                         if error_type != None:
                             if response2:
@@ -370,7 +370,7 @@ class Tools:
             # Check if a user already exists with the same username and difficulty in the "users" list.
             for user in users:
                 if user[1].lower() == username.lower() and user[2] == difficulty:  # Use ".lower()" to ignore case sensitivity when comparing the existing usernames with the entered username by making them both lowercase.
-                    response2 = messagebox.askyesno("Overwrite Score", "A score already exists for this username (case insensitive) and difficulty level. Continuing will replace this score with your final score after completion of the quiz. Are you sure you want to continue?")
+                    response2 = messagebox.askyesno("Overwrite Score", "A score already exists for this username (case insensitive) and difficulty level. Continuing will replace this score with your final score after completion of the quiz. Are you sure you want to continue?", icon="warning")
                     if response2 == True:
                         overwrite_score = True
                         return "Valid Entry"
@@ -558,64 +558,64 @@ class Tools:
         global users
         users_to_delete = []  # Create an empty list to store users to delete.
         
-        if users != []:  # Check if the "users" list is not empty.
-                if selections == "all":
-                    response = messagebox.askyesno("Delete All Scores", "Are you sure that you want to delete all recorded scores?")
-                    if response == True:
-                        if deletion_history_states.get() > 0:  # Check if the "deletion_history_states" variable is greater than 0, which means that the deletion history is enabled.
-                            # Store all users with their indices in the "history_stack" list.
-                            history_stack.append([(user, i) for i, user in enumerate(users)])
-                            # Trim the stack to the specified history limit in the "deletion_history_states" variable if the amount of stacked scores exceeds the set amount of history states.
-                            if len(history_stack) > deletion_history_states.get():
-                                history_stack.pop(0)  # Remove the last entry from the stack (corresponding to the oldest score, which has an index of 0) if the stack exceeds the history limit.
+        if users == []:  # Check if the "users" list is empty.
+            messagebox.showwarning("No Scores Recorded", "There are no recorded scores to delete.")
+            return
+        else:
+            if selections == "all":
+                response = messagebox.askyesno("Delete All Scores", "Are you sure that you want to delete all recorded scores?")
+                if response == True:
+                    if deletion_history_states.get() > 0:  # Check if the "deletion_history_states" variable is greater than 0, which means that the deletion history is enabled.
+                        # Store all users with their indices in the "history_stack" list.
+                        history_stack.append([(user, i) for i, user in enumerate(users)])
+                        # Trim the stack to the specified history limit in the "deletion_history_states" variable if the amount of stacked scores exceeds the set amount of history states.
+                        if len(history_stack) > deletion_history_states.get():
+                            history_stack.pop(0)  # Remove the last entry from the stack (corresponding to the oldest score, which has an index of 0) if the stack exceeds the history limit.
 
-                        users = []
-                        redo_stack.clear()  # Clear the "redo_stack" list to prevent any redo actions directly after deletion.
+                    users = []
+                    redo_stack.clear()  # Clear the "redo_stack" list to prevent any redo actions directly after deletion.
+                    self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
+                    self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
+                    messagebox.showinfo("Scores Deleted", "All recorded scores have been deleted.")
+                else:
+                    return
+            else:
+                if selections != []:  # Check if the "selections" list is not empty.
+                    words = ["scores", "have"] if len(selections) > 1 else ["score", "has"]  # Determine whether to use "scores" and "have", or "score" and "has" in the message boxes based on the number of selected items.
+                    response = messagebox.askyesno("Delete Selected Scores", f"Are you sure that you want to delete the selected {words[0]}?")
+                    if response == True:
+                        # Find the users to delete and record their original index positions
+                        users_to_delete = []
+                        for index, user in enumerate(users):
+                            if str(user[0]) in selections:
+                                users_to_delete.append((user, index))  # Store (user, index) in the "users_to_delete" list
+                        
+                        # Store all selected users with their indices in the "history_stack" list.
+                        if deletion_history_states.get() > 0:             # Check if the "deletion_history_states" variable is greater than 0, which means that the deletion history is enabled.
+                            history_stack.append(users_to_delete.copy())  # Use .copy() to append a snapshot of the current users_to_delete list, ensuring that future modifications to the original list (like clearing it) do not affect the stored history stack.
+                        
+                        # Trim the stack to the specified history limit in the "deletion_history_states" variable if the amount of stacked scores exceeds the set amount of history states.
+                        if len(history_stack) > deletion_history_states.get():
+                            history_stack.pop(0)  # Remove the last entry from the stack (corresponding to the oldest score, which has an index of 0) if the stack exceeds the history limit.
+
+                        # Delete users in reverse index order to avoid shifting issues.
+                        # "users_to_delete" is a list of tuples in the form (user, index), where "index" is the user's position in the "users" list.
+                        # Sorting this list by index in descending order ensures that when items are deleted, the positions of earlier items in the list are not affected.
+                        # If deletions were done in ascending order, deleting an item would shift the indices of the items that follow it, leading to incorrect deletions if more than one item is deleted at once.
+                        for user, index in sorted(users_to_delete, key=lambda x: x[1], reverse=True):  # Sort by the original index ("x[1]"), which refers to the second element ("1", being the index) in each (user, index) tuple, representing the user's original position.
+                            del users[index]     # Delete the user from the "users" list at the specified index.
+                        redo_stack.clear()       # Clear the "redo_stack" list to prevent any redo actions directly after deletion.
+                        users_to_delete.clear()  # Clear the list of users to delete.
+                        
                         self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
                         self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
-                        messagebox.showinfo("Scores Deleted", "All recorded scores have been deleted.")
+                        messagebox.showinfo("Scores Deleted", f"The selected {words[0]} {words[1]} been deleted.")
                     else:
                         return
                 else:
-                    if selections != []:  # Check if the "selections" list is not empty.
-                        words = ["scores", "have"] if len(selections) > 1 else ["score", "has"]  # Determine whether to use "scores" and "have", or "score" and "has" in the message boxes based on the number of selected items.
-                        response = messagebox.askyesno("Delete Selected Scores", f"Are you sure that you want to delete the selected {words[0]}?")
-                        if response == True:
-                            # Find the users to delete and record their original index positions
-                            users_to_delete = []
-                            for index, user in enumerate(users):
-                                if str(user[0]) in selections:
-                                    users_to_delete.append((user, index))  # Store (user, index) in the "users_to_delete" list
-                            
-                            # Store all selected users with their indices in the "history_stack" list.
-                            if deletion_history_states.get() > 0:             # Check if the "deletion_history_states" variable is greater than 0, which means that the deletion history is enabled.
-                                history_stack.append(users_to_delete.copy())  # Use .copy() to append a snapshot of the current users_to_delete list, ensuring that future modifications to the original list (like clearing it) do not affect the stored history stack.
-                            
-                            # Trim the stack to the specified history limit in the "deletion_history_states" variable if the amount of stacked scores exceeds the set amount of history states.
-                            if len(history_stack) > deletion_history_states.get():
-                                history_stack.pop(0)  # Remove the last entry from the stack (corresponding to the oldest score, which has an index of 0) if the stack exceeds the history limit.
-
-                            # Delete users in reverse index order to avoid shifting issues.
-                            # "users_to_delete" is a list of tuples in the form (user, index), where "index" is the user's position in the "users" list.
-                            # Sorting this list by index in descending order ensures that when items are deleted, the positions of earlier items in the list are not affected.
-                            # If deletions were done in ascending order, deleting an item would shift the indices of the items that follow it, leading to incorrect deletions if more than one item is deleted at once.
-                            for user, index in sorted(users_to_delete, key=lambda x: x[1], reverse=True):  # Sort by the original index ("x[1]"), which refers to the second element ("1", being the index) in each (user, index) tuple, representing the user's original position.
-                                del users[index]     # Delete the user from the "users" list at the specified index.
-                            redo_stack.clear()       # Clear the "redo_stack" list to prevent any redo actions directly after deletion.
-                            users_to_delete.clear()  # Clear the list of users to delete.
-                            
-                            self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
-                            self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
-                            messagebox.showinfo("Scores Deleted", f"The selected {words[0]} {words[1]} been deleted.")
-                        else:
-                            return
-                    else:
-                        messagebox.showwarning("No Scores Selected", "Please select at least one score to delete.")
-                        return
-                self.reset_details("Scoreboard", None)  # Reset the "sel_reference_numbers" list in the Scoreboard class so that the list is ready for new selections.
-        else:
-            messagebox.showwarning("No Scores Recorded", "There are no recorded scores to delete.")
-            return
+                    messagebox.showwarning("No Scores Selected", "Please select at least one score to delete.")
+                    return
+            self.reset_details("Scoreboard", None)  # Reset the "sel_reference_numbers" list in the Scoreboard class so that the list is ready for new selections.
 
 
     # Method for undoing the deletion of scores.
@@ -656,28 +656,34 @@ class Tools:
     # Method for resetting details specific to the specified window.
     def reset_details(self, origin, action):
         global username, difficulty, difficulty_num, question_amount, question_details, temp_fake_answers
-        if origin == "Completion":
+        if origin == "Completion" or origin == "Quiz" and action == "User Reset":
             username = None
             difficulty = None
             difficulty_num = None
             question_amount = None
-            self.quiz.quiz_save = []
             temp_fake_answers = []
             question_details.clear()
+            self.quiz.quiz_save = []
         elif origin == "Scoreboard":
             self.scoreboard.sel_reference_numbers.clear()
         elif origin == "Quiz": 
                 if action == "Restart" or action == "New":
                     self.quiz.score = 0
                     self.quiz.quiz_save = []
+                
                 if action == "New":
                     temp_fake_answers = []
                     question_details.clear()
-                elif action == "Home":
+                elif action == "Home" or action == "Scoreboard":
+                    self.quiz.score = 0
                     temp_fake_answers = []
                     question_details.clear()
                     self.quiz.quiz_save = []
-                self.quiz.retry_active = False
+                
+                if action != "Restart":  # Only reset these variables if the user is not restarting the quiz, otherwise restarting during a quiz retry or answer viewing mode will cause issues.
+                    self.quiz.answer_viewing_active = False
+                    self.quiz.retry_active = False
+
                 self.quiz.current_index = 0
                 self.quiz.question_no = 1
 
@@ -699,10 +705,11 @@ class Tools:
                 return "Timer Disabled"
         
         elif origin == "Quiz Menubar":
-            if command == "Enable":
-                self.quiz.timer_lbl.configure(text=f"Time: {self.quiz.time_string}")
-            elif command == "Disable":
-                self.quiz.timer_lbl.configure(text="Timer Disabled")
+            if self.quiz.answer_viewing_active == False:  # Only configure the timer label if not in answer viewing mode, since the timer is not available in that mode.
+                if command == "Enable":
+                    self.quiz.timer_lbl.configure(text=f"Time: {self.quiz.time_string}")
+                elif command == "Disable":
+                    self.quiz.timer_lbl.configure(text="Timer Disabled")
             if procedure != None: procedure()
 
         elif origin == "Completion":
@@ -878,9 +885,9 @@ class Scoreboard:
                       width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=1, row=0, sticky=EW, padx=(0,5), pady=(0,5))
         CTk.CTkButton(top_frame1, text="Home", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.tools.clear_widget(self.home.setup_homepage, True, None, None, None, self.tools.unbind_keys(self.binded_keys)),
                       width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=2, row=0, sticky=EW, padx=(5,0), pady=(0,5))
-        CTk.CTkButton(top_frame1, text="View Answers", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR,
+        CTk.CTkButton(top_frame1, text="View Answers", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.quiz.review_quiz("View Answers", "Scoreboard", self.sel_reference_numbers),
                       width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=1, row=1, sticky=EW, padx=(0,5), pady=(5,0))
-        CTk.CTkButton(top_frame1, text="Retry Quiz", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.quiz.retry_quiz("Scoreboard", self.sel_reference_numbers),
+        CTk.CTkButton(top_frame1, text="Retry Quiz", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.quiz.review_quiz("Retry", "Scoreboard", self.sel_reference_numbers),
                       width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=2, row=1, sticky=EW, padx=(5,0), pady=(5,0))
 
         # Reload the user scores from the scoreboard.json file.
@@ -1102,9 +1109,9 @@ class Completion:
         button_frame.columnconfigure(1, weight=1, minsize=205)
 
         # Create the buttons.
-        CTk.CTkButton(button_frame, text="View Answers",
+        CTk.CTkButton(button_frame, text="View Answers", command=lambda: self.quiz.review_quiz("View Answers", "Completion", None),
                       width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=0, sticky=EW, padx=(0,5), pady=(0,5))
-        CTk.CTkButton(button_frame, text="Retry Quiz", command=lambda: self.quiz.retry_quiz("Completion", None),
+        CTk.CTkButton(button_frame, text="Retry Quiz", command=lambda: self.quiz.review_quiz("Retry", "Completion", None),
                       width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=1, row=0, sticky=EW, padx=(5,0), pady=(0,5))
         CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.quiz.reset_timer("Scoreboard", "Completion"),
                       width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=EW, padx=(0,5), pady=(5,0))
@@ -1142,14 +1149,19 @@ class Quiz:
 
 
     def exit_quiz(self, command, origin):
-        if origin == "Quiz" and command == "Home":
+        if origin == "Quiz" and command == "Home" or command == "Scoreboard":
             paused_prior = quiz_paused  # Check if the quiz has been paused prior to pressing the exit button, meaning it shouldn't be paused twice and then unpaused.
-            if paused_prior == False: self.pause_quiz()
-            response1 = messagebox.askyesno("Exit Quiz", "Are you sure you want to exit the quiz?\nAll progress will be lost.", icon="warning")
+            
+            if self.answer_viewing_active == False:  # Only utilise the pause method if the user is not currently viewing the answers, since pausing isn't available on the answer viewing mode.
+                if paused_prior == False: self.pause_quiz()
+
+            # Ask the user if they're sure they want to exit the quiz, and inform them that all progress will be lost, only if they aren't in the answer viewing mode.
+            response1 = messagebox.askyesno("Exit Quiz", "Are you sure you want to exit the quiz?" + ("\nAll progress will be lost." if self.answer_viewing_active == False else ""), icon="warning" if self.answer_viewing_active == False else "question")
             if response1 == True:
                 self.stop_timer(command, origin)
             else:
-                if paused_prior == False: self.unpause_quiz()
+                if self.answer_viewing_active == False:  # Only utilise the unpause method if the user is not currently viewing the answers, since pausing isn't available on the answer viewing mode.
+                    if paused_prior == False: self.unpause_quiz()
                 return
         
 
@@ -1171,11 +1183,15 @@ class Quiz:
 
         if origin == "Quiz":
             if command == "Restart Quiz":
-                response1 = messagebox.askyesno("Restart Quiz", "Are you sure you want to restart the quiz?\nAll progress will be lost.", icon="warning")
-                if response1 == False: return
+                if self.answer_viewing_active == False:  # Only provide a warning if the user is completing a standard quiz, since no progress would be lost by restarting in the answer viewing mode.
+                    response1 = messagebox.askyesno("Restart Quiz", "Are you sure you want to restart the quiz?\nAll progress will be lost.", icon="warning")
+                    if response1 == False: return
             if command == "New Quiz":
                 if self.retry_active == True:
                     messagebox.showinfo("Cannot Start New Quiz", "A new quiz cannot be started because you are currently retrying an existing quiz. Please finish or exit the current quiz before starting a new one.")
+                    return
+                elif self.answer_viewing_active == True:
+                    messagebox.showinfo("Cannot Start New Quiz", "A new quiz cannot be started because you are currently viewing the answers of an existing quiz. Please finish or exit the current quiz before starting a new one.")
                     return
                 response1 = messagebox.askyesno("New Quiz", "Are you sure you want to start a new quiz?\nAll progress will be lost.", icon="warning")
                 if response1 == False: return
@@ -1187,7 +1203,7 @@ class Quiz:
                     else: self.tools.save_details("New Quiz", "Quiz", None, SETTINGS_FILE_PATH) 
             self.tools.unbind_keys(self.binded_keys)
 
-        if command == "Home" or command == "Restart Quiz" or command == "New Quiz":
+        if command == "Home" or command == "Scoreboard" or command == "Restart Quiz" or command == "New Quiz":
             self.reset_timer(command, origin)
 
 
@@ -1202,12 +1218,13 @@ class Quiz:
 
         if command == "Home" or command == "Scoreboard":
             if origin == "Completion": self.tools.reset_details(origin, None)  # If the origin is from the completion page, reset the user details so that the home page doesn't remember the previous details.
-            elif origin == "Quiz": self.tools.reset_details(origin, command if command == "Home" else None)  # If the origin is from the quiz page, reset the quiz details so that starting a quiz later from the home page will use new questions. Ensure quiz details are cleared by passing "Home" if the command is "Home", otherwise pass "None".
+            elif origin == "Quiz": self.tools.reset_details(origin, command)   # If the origin is from the quiz page, reset the quiz details so that starting a quiz later from the home page will use new questions.
             self.question_no = 1
             self.score = 0
             if command == "Home":
                 self.tools.clear_widget(self.home.setup_homepage, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the home page.
             elif command == "Scoreboard":
+                self.tools.reset_details("Quiz", "User Reset")  # Clear the quiz and user details (passing "Quiz" as the origin and "User Reset" as the action so that going home from the scoreboard won't reuse the user details of the viewed or retried quiz).
                 self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the scoreboard page.
         elif command == "New Quiz":
             self.tools.reset_details("Quiz", "New")  # Pass "New" action so that all quiz details are cleared.
@@ -1252,40 +1269,99 @@ class Quiz:
         self.start_timer()     
 
 
-    def retry_quiz(self, origin, selection):
+    # Method for either retrying a saved quiz or viewing the answers of a saved quiz.
+    def review_quiz(self, mode, origin, selection):
         global overwrite_score, ref_number, username, difficulty, difficulty_num, question_amount, question_details
-        if origin == "Scoreboard":
-            if len(selection) > 1:
-                messagebox.showwarning("Invalid Selection", "Please only select one saved quiz to retry.")
-                return
-            elif selection == []:
-                messagebox.showwarning("No Saved Quiz Selected", "Please select a saved quiz to retry.")
-                return
+        if mode == "Retry":
+            if origin == "Scoreboard":
+                if users == []:
+                    messagebox.showwarning("No Saved Quizzes Available", "There are no saved quizzes to retry.")
+                    return
+                else:
+                    if len(selection) > 1:
+                        messagebox.showwarning("Invalid Selection", "Please only select one saved quiz to retry.")
+                        return
+                    elif selection == []:
+                        messagebox.showwarning("No Saved Quiz Selected", "Please select a saved quiz to retry.")
+                        return
 
-            for i, user in enumerate(users):
-                if str(user[0]) == selection[0]:
-                    index = i
-                    break
+                    for i, user in enumerate(users):
+                        if str(user[0]) == selection[0]:
+                            index = i
+                            break
+                    
+                    overwrite_score = True
+                    self.retry_active = True
+                    self.scoreboard.sel_reference_numbers.clear()  # Clear the selected reference numbers of the scoreboard's treeview widget to ensure a score has to be selected again before it can be managed when returning to the scoreboard.
+                    self.score = 0
+                    ref_number = users[index][0]
+                    username = users[index][1]
+                    difficulty = users[index][2]
+                    difficulty_num = 0 if users[index][2] == "Easy" else 1 if users[index][2] == "Medium" else 2
+                    question_amount = users[index][3]
+
+                    # For each question in the saved quiz from the "users" list, append the 6 elements of the question to the "question_details" list (this excludes the original user answer [7th element]).
+                    for question in users[index][6]:
+                        question_details.append(question[:6])
             
-            overwrite_score = True
-            self.retry_active = True
-            ref_number = users[index][0]
-            username = users[index][1]
-            difficulty = users[index][2]
-            difficulty_num = 0 if users[index][2] == "Easy" else 1 if users[index][2] == "Medium" else 2
-            question_amount = users[index][3]
+            elif origin == "Completion":
+                overwrite_score = True
+                self.retry_active = True
+                self.quiz_save = []
+                self.score = 0
+                self.reset_timer(None, None)
 
-            for question in users[index][6]:
-                question_details.append(question[:6])  # For each question in the saved quiz from the "users" list, append the 6 elements of the question to the "question_details" list (this excludes the original user answer [7th element]).
+            self.tools.clear_widget(lambda: self.setup_quiz("Retry Quiz"), True, None, None, None, None)
         
-        elif origin == "Completion":
-            overwrite_score = True
-            self.retry_active = True
-            self.score = 0
-            self.quiz_save = []
-            self.reset_timer(None, None)
+        elif mode == "View Answers":
+            if origin == "Scoreboard":
+                if users == []:
+                    messagebox.showwarning("No Saved Quizzes Available", "There are no saved quizzes to view the answers of.")
+                    return
+                else:  
+                    if len(selection) > 1:
+                        messagebox.showwarning("Invalid Selection", "Please only select one saved quiz to view the answers of.")
+                        return
+                    elif selection == []:
+                        messagebox.showwarning("No Saved Quiz Selected", "Please select a saved quiz to view the answers of.")
+                        return
 
-        self.tools.clear_widget(lambda: self.setup_quiz("Retry Quiz"), True, None, None, None, None)
+                    for i, user in enumerate(users):
+                        if str(user[0]) == selection[0]:
+                            index = i
+                            break
+                    
+                    self.answer_viewing_active = True
+                    self.scoreboard.sel_reference_numbers.clear()  # Clear the selected reference numbers of the scoreboard's treeview widget to ensure a score has to be selected again before it can be managed when returning to the scoreboard.
+                    self.all_answers = []
+                    ref_number = users[index][0]
+                    username = users[index][1]
+                    difficulty = users[index][2]
+                    difficulty_num = 0 if users[index][2] == "Easy" else 1 if users[index][2] == "Medium" else 2
+                    question_amount = users[index][3]
+
+                    # For each question in the saved quiz from the "users" list, append the 7 elements of the question to the "question_details" list (this includes the original user answer [7th element]).
+                    for question in users[index][6]:
+                        question_details.append(question[:7])
+                        
+                        # Create a list of the answers and shuffle them only once (as using the shuffle in "update_question" each time Next or Previous is pressed would result in the answers being arranged when going to the previous question).
+                        answer_choices = [question[4]] + question[5]
+                        random.shuffle(answer_choices)
+                        self.all_answers.append(answer_choices)
+                    
+            
+            elif origin == "Completion":
+                self.answer_viewing_active = True
+                self.all_answers = []
+                question_details = self.quiz_save  # Set the "question_details" list to the saved quiz questions and answers from the "quiz_save" list (this includes the original user answers [7th element]), so that the View Answers mode can be accessed from the Completion page to view the answers of the just-completed quiz.
+
+                # Create a list of the answers and shuffle them only once (as using the shuffle in "update_question" each time Next or Previous is pressed would result in the answers being arranged when going to the previous question).
+                for question in question_details:
+                    answer_choices = [question[4]] + question[5]
+                    random.shuffle(answer_choices)
+                    self.all_answers.append(answer_choices)
+
+            self.tools.clear_widget(lambda: self.setup_quiz("View Answers"), True, None, None, None, None)
 
 
     # Method for running the timer loop, which updates the elapsed time and timer label every second.
@@ -1359,7 +1435,7 @@ class Quiz:
         self.angle_value = question_details[self.current_index][3][3]       # Get the fourth value of the "question" list within the "question_details" list.
 
         # Create a blank transparent image 200x160 px in size.
-        image = Image.new("RGBA", (200, 160), (0, 0, 0, 0))  # "RGBA" for RBG with transparency, using (0, 0, 0, 0) for transparent background colour.
+        image = Image.new("RGBA", (200, 160), (0, 0, 0, 0))  # "RGBA" for RBG with transparency (A for alpha - transparency level), using (0 (Red), 0 (Green), 0 (Blue), 0 (Alpha)) for transparent background colour.
         draw = ImageDraw.Draw(image)
 
         # Coordinates of the right-angled triangle (at bottom-left corner).
@@ -1388,7 +1464,7 @@ class Quiz:
         triangle_img = CTk.CTkImage(light_image=image, dark_image=image, size=(200, 160))
 
         # Create a label to display the image.
-        self.triangle_lbl = CTk.CTkLabel(master=self.inner_frame, image=triangle_img, text=None)
+        self.triangle_lbl = CTk.CTkLabel(self.inner_frame, image=triangle_img, text=None)
         self.triangle_lbl.grid(row=0, column=0, sticky=E, padx=(0,20))
 
         # Create a label for the title text.
@@ -1422,6 +1498,17 @@ class Quiz:
 
     # Method for updating the question and answer options for the current question.
     def update_question(self):
+        if self.answer_viewing_active == True:
+            if self.question_no == 1:
+                self.previous_btn.configure(state="disabled")  # Disable the previous button for the first question since there is no previous question to go to.
+            else:
+                self.previous_btn.configure(state="normal")
+
+            if self.question_no == len(question_details):
+                self.next_btn.configure(text="Finish")  # Change the next button text to "Finish" for the last question so that it's clearer to the user that they are on the final question.
+            else:
+                self.next_btn.configure(text="Next")
+        
         self.current_index = self.question_no - 1  # Remove 1 to correctly index from the "question_details" list (since lists start at index 0, but the question numbers start at 1).
         self.upcoming_topic = question_details[self.current_index][0]
         self.current_title = question_details[self.current_index][1]
@@ -1465,41 +1552,100 @@ class Quiz:
             self.left_length_lbl.configure(text=self.left_value)
             self.bottom_length_lbl.configure(text=self.bottom_value)
             self.angle_value_lbl.configure(text=self.angle_value)
-        
-        # Shuffle answer options and assign them to buttons
-        answer_choices = [self.correct_answer] + self.fake_answers
-        random.shuffle(answer_choices)
 
-        self.btn_1.configure(text=f" A.    {answer_choices[0]}", command=lambda: self.answer_management(answer_choices[0]))
-        self.btn_2.configure(text=f" B.    {answer_choices[1]}", command=lambda: self.answer_management(answer_choices[1]))
-        self.btn_3.configure(text=f" C.    {answer_choices[2]}", command=lambda: self.answer_management(answer_choices[2]))
-        self.btn_4.configure(text=f" D.    {answer_choices[3]}", command=lambda: self.answer_management(answer_choices[3]))
+        if self.answer_viewing_active == True:
+            self.btn_1.configure(text=f" A.    {self.all_answers[self.current_index][0]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR, image=None)
+            self.answer_management(self.btn_1, self.all_answers[self.current_index][0])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_1) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            self.btn_2.configure(text=f" B.    {self.all_answers[self.current_index][1]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR, image=None)
+            self.answer_management(self.btn_2, self.all_answers[self.current_index][1])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_2) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            self.btn_3.configure(text=f" C.    {self.all_answers[self.current_index][2]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR, image=None)
+            self.answer_management(self.btn_3, self.all_answers[self.current_index][2])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_3) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            self.btn_4.configure(text=f" D.    {self.all_answers[self.current_index][3]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR, image=None)
+            self.answer_management(self.btn_4, self.all_answers[self.current_index][3])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_4) will be highlighted if it contains the correct or user-chosen incorrect answer.
+
+        else:
+            # Shuffle answer options and assign them to buttons
+            answer_choices = [self.correct_answer] + self.fake_answers
+            random.shuffle(answer_choices)
+
+            self.btn_1.configure(text=f" A.    {answer_choices[0]}", command=lambda: self.answer_management(self.btn_1, answer_choices[0]))
+            self.btn_2.configure(text=f" B.    {answer_choices[1]}", command=lambda: self.answer_management(self.btn_2, answer_choices[1]))
+            self.btn_3.configure(text=f" C.    {answer_choices[2]}", command=lambda: self.answer_management(self.btn_3, answer_choices[2]))
+            self.btn_4.configure(text=f" D.    {answer_choices[3]}", command=lambda: self.answer_management(self.btn_4, answer_choices[3]))
 
 
     # Method for managing the user's answer to the current question.
-    def answer_management(self, answer):
-        self.current_index = self.question_no - 1  # Remove 1 to correctly index from the "question_details" list (since lists start at index 0, but the question numbers start at 1).
-
-        self.quiz_save.append([question_details[self.current_index][0],
-                               question_details[self.current_index][1],
-                               question_details[self.current_index][2],
-                               question_details[self.current_index][3],
-                               question_details[self.current_index][4],
-                               question_details[self.current_index][5],
-                               answer])
+    def answer_management(self, button, answer):
+        if self.answer_viewing_active == True:
+            if button == self.previous_btn:
+                if self.question_no > 1:  # Go to the previous question by removing 1 from the question number and updating the question, only if the question number is greater than 1 (since the question numbers start at 1).
+                    self.question_no -= 1
+                    self.question_no_lbl.configure(text=f"Question {self.question_no}/{question_amount}")  # Update the question number label.
+                    self.update_question()
+            
+            elif button == self.next_btn:
+                if self.question_no < question_amount:
+                    self.question_no += 1
+                    self.question_no_lbl.configure(text=f"Question {self.question_no}/{question_amount}")  # Update the question number label.
+                    self.update_question()
+                    
+                else:
+                    self.tools.reset_details("Completion", None)    # Clear the quiz and user details (passing "Completion" as the origin)
+                    self.tools.reset_details("Quiz", "Scoreboard")  # Clear the extra quiz details (passing "Scoreboard" as the origin)
+                    self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the completion page.
         
-        if answer == self.correct_answer:  # Check if the most recent answer matches the correct answer for the current question.
-            self.score += 1 
-                
-        if self.question_no < question_amount:
-            self.question_no += 1
-            self.question_no_lbl.configure(text=f"Question {self.question_no}/{question_amount}")  # Update the question number label.
-            self.update_question()
+            else:
+                self.current_index = self.question_no - 1  # Remove 1 to correctly index from the "question_details" list (since lists start at index 0, but the question numbers start at 1).
+                self.user_answer = question_details[self.current_index][6]
 
+                main_window.button_image_1 = Image.open("AppData/Images/tick.png")  # Load the correct answer button image.
+                self.tick_image = main_window.button_image_1  # Assign the loaded image to a variable for use in a correct answer button.
+                self.tick_img = CTk.CTkImage(self.tick_image, size=(20, 17))  # Create a CTkImage object with the tick image to allow scaling to be used.
+
+                main_window.button_image_2 = Image.open("AppData/Images/cross.png")  # Load the incorrect answer button image.
+                self.cross_image = main_window.button_image_2  # Assign the loaded image to a variable for use in an incorrect answer button.
+                self.cross_img = CTk.CTkImage(self.cross_image, size=(20, 17))  # Create a CTkImage object with the cross image to allow scaling to be used.
+
+                # Check if the user answer was incorrect
+                if self.user_answer != self.correct_answer:
+                    # Highlight the correct answer button with green.
+                    if answer == self.correct_answer:
+                        button.configure(border_color="#00ea89", border_width=3, text_color_disabled=FONT_COLOUR)
+                
+                    # Highlight the user's incorrect answer button choice with red.
+                    if answer == self.user_answer:
+                        button.configure(fg_color="#f37272", text_color_disabled=FONT_COLOUR, image=self.cross_img, compound="right")
+                
+                # Check if the user answer was correct
+                elif self.user_answer == self.correct_answer:
+                    # Highlight the correct answer button with green.
+                    if answer == self.correct_answer:
+                        button.configure(fg_color="#00ea89", text_color_disabled=FONT_COLOUR, image=self.tick_img, compound="right")
+        
         else:
-            self.stop_timer(None, "Quiz")
-            self.tools.reset_details("Quiz", None)
-            self.tools.clear_widget(self.completion.submit_details, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the completion page.
+            self.current_index = self.question_no - 1  # Remove 1 to correctly index from the "question_details" list (since lists start at index 0, but the question numbers start at 1).
+
+            self.quiz_save.append([question_details[self.current_index][0],
+                                question_details[self.current_index][1],
+                                question_details[self.current_index][2],
+                                question_details[self.current_index][3],
+                                question_details[self.current_index][4],
+                                question_details[self.current_index][5],
+                                answer])
+            
+            if answer == self.correct_answer:  # Check if the most recent answer matches the correct answer for the current question.
+                self.score += 1 
+                    
+            if self.question_no < question_amount:
+                self.question_no += 1
+                self.question_no_lbl.configure(text=f"Question {self.question_no}/{question_amount}")  # Update the question number label.
+                self.update_question()
+
+            else:
+                self.stop_timer(None, "Quiz")
+                self.tools.reset_details("Quiz", None)
+                self.tools.clear_widget(self.completion.submit_details, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the completion page.
+        return
 
 
     def hard_mode(self):
@@ -1799,7 +1945,7 @@ class Quiz:
         global quiz_paused
         quiz_paused = False  # Set the flag to indicate that the quiz is not paused.
 
-        if scenario != "Restart Quiz" and scenario != "Retry Quiz":  # Ensure that questions are not generated again when restarting or retrying the quiz.
+        if scenario != "Restart Quiz" and scenario != "Retry Quiz" and scenario != "View Answers":  # Ensure that questions are not generated again when restarting or retrying the quiz.
             # Set the difficulty level of the quiz.
             if difficulty == "Easy":
                 self.easy_mode()
@@ -1819,7 +1965,7 @@ class Quiz:
         quiz_menubar.add_cascade(label="Quiz", menu=quiz_menu)
         quiz_menu.add_command(label="Restart Quiz", accelerator="Ctrl+R", command=lambda: self.stop_timer("Restart Quiz", "Quiz"))
         quiz_menu.add_command(label="New Quiz", accelerator="Ctrl+N", command=lambda: self.stop_timer("New Quiz", "Quiz"))
-        quiz_menu.add_command(label="Exit Quiz", accelerator="Esc", command=lambda: self.exit_quiz("Home", "Quiz"))
+        quiz_menu.add_command(label="Exit Quiz", accelerator="Esc", command=lambda: self.exit_quiz("Scoreboard" if self.answer_viewing_active == True or self.retry_active == True else "Home", "Quiz"))  # If the user is currently viewing the answers or retrying a quiz, exiting the quiz goes to the scoreboard screen rather than the home screen. Exiting the normal quiz mode goes back to the home screen.
 
         settings_menu = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         quiz_menubar.add_cascade(label="Settings", menu=settings_menu)
@@ -1841,14 +1987,15 @@ class Quiz:
         help_menu = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         quiz_menubar.add_cascade(label="Help", menu=help_menu)
         help_menu.add_command(label="Documentation")
-        help_menu.add_command(label="About", command=lambda: self.about.setup_about("Quiz"))
+        origin = "Quiz Answers" if self.answer_viewing_active == True else "Quiz"  # About window utilises pause functionality when a quiz is active, so the origin needs to be something other than "Quiz" for this to not be used (since the answer viewing mode cannot be paused).
+        help_menu.add_command(label="About", command=lambda: self.about.setup_about(origin))
 
         main_window.config(menu=quiz_menubar)
 
         # Bind key shortcuts to perform actions.
         main_window.bind("<Control-r>", lambda e: self.stop_timer("Restart Quiz", "Quiz"))  # Bind Ctrl+R to restart the quiz.
         main_window.bind("<Control-n>", lambda e: self.stop_timer("New Quiz", "Quiz"))      # Bind Ctrl+N to start a new quiz.
-        main_window.bind("<Escape>", lambda e: self.exit_quiz("Home", "Quiz"))              # Bind Escape to exit the quiz and return to the home page.
+        main_window.bind("<Escape>", lambda e: self.exit_quiz("Scoreboard" if self.answer_viewing_active == True or self.retry_active == True else "Home", "Quiz"))              # Bind Escape to exit the quiz and return to the home page.
         self.binded_keys = ["<Control-r>", "<Control-n>", "<Escape>"]                       # Create a list of binded keys to be used later for unbinding them when the user goes to a different page.
 
         # Banner creation (left side)
@@ -1877,30 +2024,46 @@ class Quiz:
         quiz_dtls_frame1 = CTk.CTkFrame(self.main_content_frame, fg_color=FRAME_FG, corner_radius=10)
         quiz_dtls_frame1.grid(column=0, row=0, sticky=EW, padx=20, pady=(0,5))
         
-        # Set width for columns 0-2 (3 total) in quiz details frame 1. Total minimum column width is 410px.
-        quiz_dtls_frame1.columnconfigure(0, weight=0, minsize=185)
-        quiz_dtls_frame1.columnconfigure(1, weight=0, minsize=40)
-        quiz_dtls_frame1.columnconfigure(2, weight=0, minsize=185)
+        if self.answer_viewing_active == True:
+            # Set width for columns 0-2 (3 total) in quiz details frame 1. Total minimum column width is 410px.
+            quiz_dtls_frame1.columnconfigure(0, weight=0, minsize=190)
+            quiz_dtls_frame1.columnconfigure(1, weight=0, minsize=110)
+            quiz_dtls_frame1.columnconfigure(2, weight=0, minsize=110)
+            
+            # Create the labels and pause button to be placed at the top of the quiz page.
+            self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{question_amount}", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR)
+            self.question_no_lbl.grid(column=0, row=0, pady=10, sticky=NSEW)
+            self.previous_btn = CTk.CTkButton(quiz_dtls_frame1, text="Previous", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, width=100, height=30, corner_radius=7.5, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, command=lambda: self.answer_management(self.previous_btn, None),
+                                              state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
+            self.previous_btn.grid(column=1, row=0, padx=(0,10), pady=10)
+            self.next_btn = CTk.CTkButton(quiz_dtls_frame1, text="Next", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, width=100, height=30, corner_radius=7.5, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, command=lambda: self.answer_management(self.next_btn, None))
+            self.next_btn.grid(column=2, row=0, padx=(0,10), pady=10)
+        
+        else:
+            # Set width for columns 0-2 (3 total) in quiz details frame 1. Total minimum column width is 410px.
+            quiz_dtls_frame1.columnconfigure(0, weight=0, minsize=185)
+            quiz_dtls_frame1.columnconfigure(1, weight=0, minsize=40)
+            quiz_dtls_frame1.columnconfigure(2, weight=0, minsize=185)
 
-        main_window.button_image_1 = Image.open("AppData/Images/pause.png")  # Load the pause button image.
-        self.pause_image = main_window.button_image_1  # Assign the loaded image to a variable for use in the pause button.
-        self.pause_img = CTk.CTkImage(self.pause_image, size=(16, 17))  # Create a CTkImage object with the pause image to allow scaling to be used.
+            main_window.button_image_1 = Image.open("AppData/Images/pause.png")  # Load the pause button image.
+            self.tick_image = main_window.button_image_1  # Assign the loaded image to a variable for use in the pause button.
+            self.pause_img = CTk.CTkImage(self.tick_image, size=(16, 17))  # Create a CTkImage object with the pause image to allow scaling to be used.
 
-        main_window.button_image_2 = Image.open("AppData/Images/play.png")  # Load the pause button image.
-        self.play_image = main_window.button_image_2  # Assign the loaded image to a variable for use in the pause button.
-        self.play_img = CTk.CTkImage(self.play_image, size=(16, 17))  # Create a CTkImage object with the pause image to allow scaling to be used.
+            main_window.button_image_2 = Image.open("AppData/Images/play.png")  # Load the play button image.
+            self.cross_image = main_window.button_image_2  # Assign the loaded image to a variable for use in the play button.
+            self.play_img = CTk.CTkImage(self.cross_image, size=(16, 17))  # Create a CTkImage object with the play image to allow scaling to be used.
 
-        # Create the labels and pause button to be placed at the top of the quiz page.
-        self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{question_amount}", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR)
-        self.question_no_lbl.grid(column=0, row=0, pady=10, sticky=NSEW)
-        self.pause_btn = CTk.CTkButton(quiz_dtls_frame1, text=None, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=self.pause_quiz, width=40, height=30, corner_radius=7.5, image=self.pause_img, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
-        self.pause_btn.grid(column=1, row=0, pady=10)
-        self.timer_lbl = CTk.CTkLabel(quiz_dtls_frame1, text="", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
-        self.timer_lbl.grid(column=2, row=0, pady=10, sticky=NSEW)
-        if timer.get() == True:
-            self.timer_lbl.configure(text=self.tools.timer_config("Quiz", "Enable", None))
-        elif timer.get() == False:
-            self.timer_lbl.configure(text=self.tools.timer_config("Quiz", "Disable", None))
+            # Create the labels and pause button to be placed at the top of the quiz page.
+            self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{question_amount}", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR)
+            self.question_no_lbl.grid(column=0, row=0, pady=10, sticky=NSEW)
+            self.pause_btn = CTk.CTkButton(quiz_dtls_frame1, text=None, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=self.pause_quiz, width=40, height=30, corner_radius=7.5, image=self.pause_img, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
+            self.pause_btn.grid(column=1, row=0, pady=10)
+            self.timer_lbl = CTk.CTkLabel(quiz_dtls_frame1, text="", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
+            self.timer_lbl.grid(column=2, row=0, pady=10, sticky=NSEW)
+            if timer.get() == True:
+                self.timer_lbl.configure(text=self.tools.timer_config("Quiz", "Enable", None))
+            elif timer.get() == False:
+                self.timer_lbl.configure(text=self.tools.timer_config("Quiz", "Disable", None))
 
         # Create a frame for the question label or question image.
         self.question_frame = CTk.CTkFrame(self.main_content_frame, fg_color=FRAME_FG, corner_radius=10)
@@ -1933,22 +2096,50 @@ class Quiz:
         # Set width for columns 0-1 (2 total) in the answer frame. Total minimum column width is 410px.
         self.answer_frame.columnconfigure(0, weight=0, minsize=205)
         self.answer_frame.columnconfigure(1, weight=0, minsize=205)
+
+        if self.answer_viewing_active == True:
+            # Create the disabled answer buttons, which automatically send their value to answer management (using invoke) to identify what button displays the stored user answer and the correct answer.
+            self.btn_1 = CTk.CTkButton(self.answer_frame, text=f" A.    {self.all_answers[self.current_index][0]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
+            self.btn_1.grid(column=0, row=0, padx=(0, 5), pady=(0,5))
+            self.answer_management(self.btn_1, self.all_answers[self.current_index][0])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_1) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            
+            self.btn_2 = CTk.CTkButton(self.answer_frame, text=f" B.    {self.all_answers[self.current_index][1]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
+            self.btn_2.grid(column=1, row=0, padx=(5, 0), pady=(0,5))
+            self.answer_management(self.btn_2, self.all_answers[self.current_index][1])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_2) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            
+            self.btn_3 = CTk.CTkButton(self.answer_frame, text=f" C.    {self.all_answers[self.current_index][2]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
+            self.btn_3.grid(column=0, row=1, padx=(0, 5), pady=(5,0))
+            self.answer_management(self.btn_3, self.all_answers[self.current_index][2])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_3) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            
+            self.btn_4 = CTk.CTkButton(self.answer_frame, text=f" D.    {self.all_answers[self.current_index][3]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
+            self.btn_4.grid(column=1, row=1, padx=(5, 0), pady=(5,0))
+            self.answer_management(self.btn_4, self.all_answers[self.current_index][3])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_4) will be highlighted if it contains the correct or user-chosen incorrect answer.
         
-        # Create a list of the answers and shuffle them.
-        answer_choices = [self.correct_answer] + self.fake_answers
-        random.shuffle(answer_choices)
+        else:
+            # Create a list of the answers and shuffle them.
+            answer_choices = [self.correct_answer] + self.fake_answers
+            random.shuffle(answer_choices)
 
-        # Create the answer buttons.
-        self.btn_1 = CTk.CTkButton(self.answer_frame, text=f" A.    {answer_choices[0]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(answer_choices[0]), anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
-        self.btn_1.grid(column=0, row=0, padx=(0, 5), pady=(0,5))
-        self.btn_2 = CTk.CTkButton(self.answer_frame, text=f" B.    {answer_choices[1]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(answer_choices[1]), anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
-        self.btn_2.grid(column=1, row=0, padx=(5, 0), pady=(0,5))
-        self.btn_3 = CTk.CTkButton(self.answer_frame, text=f" C.    {answer_choices[2]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(answer_choices[2]), anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
-        self.btn_3.grid(column=0, row=1, padx=(0, 5), pady=(5,0))
-        self.btn_4 = CTk.CTkButton(self.answer_frame, text=f" D.    {answer_choices[3]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(answer_choices[3]), anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
-        self.btn_4.grid(column=1, row=1, padx=(5, 0), pady=(5,0))
+            # Create the answer buttons.
+            self.btn_1 = CTk.CTkButton(self.answer_frame, text=f" A.    {answer_choices[0]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(self.btn_1, answer_choices[0]),
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
+            self.btn_1.grid(column=0, row=0, padx=(0, 5), pady=(0,5))
+            self.btn_2 = CTk.CTkButton(self.answer_frame, text=f" B.    {answer_choices[1]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(self.btn_2, answer_choices[1]),
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
+            self.btn_2.grid(column=1, row=0, padx=(5, 0), pady=(0,5))
+            self.btn_3 = CTk.CTkButton(self.answer_frame, text=f" C.    {answer_choices[2]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(self.btn_3, answer_choices[2]),
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
+            self.btn_3.grid(column=0, row=1, padx=(0, 5), pady=(5,0))
+            self.btn_4 = CTk.CTkButton(self.answer_frame, text=f" D.    {answer_choices[3]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(self.btn_4, answer_choices[3]),
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
+            self.btn_4.grid(column=1, row=1, padx=(5, 0), pady=(5,0))
 
-        self.start_timer()
+        if self.answer_viewing_active == False:
+            self.start_timer()  # Only start the timer if answer viewing is not active (False), since the timer does not need to be used when viewing quiz answers.
 
 
 
@@ -2090,11 +2281,10 @@ class Home:
 
         # Set up the username entry, which is either an entry box if there are no usernames saved, or a combo box if there are usernames saved. This prevents the user from trying to open a combo box dropdown when there are no usernames saved.
         display_usernames = [user[1] for user in users]  # Get the usernames from the users list.
-        truncated_usernames = [name[:12] + "..." if len(name) > 13 else name for name in display_usernames]  # For each username in "display_usernames", truncate the username to 12 characters if it is longer than 13 characters, otherwise use the full username.
         processed = []  # Create an empty list to store one instance of each username, ensuring that there are no duplicates.
         # Create a list of usernames that are unique regardless of casing (e.g., "Jack" and "JACK" are treated as the same username - "jack"), using ".lower" so that all pr usernames are converted to lowercase.
         # Only the first occurrence of each lowercase name is included in "unique_display_usernames", as all lowercase versions are added to the "processed" list to find duplicates.
-        unique_display_usernames = [name for name in truncated_usernames if not (name.lower() in processed or processed.append(name.lower()))]  # Usernames included in "unique_display_usernames" are ones that are not already in the "processed" list. If they aren't in the "processed" list, add them to the list to prevent future duplicates.
+        unique_display_usernames = [name for name in display_usernames if not (name.lower() in processed or processed.append(name.lower()))]  # Usernames included in "unique_display_usernames" are ones that are not already in the "processed" list. If they aren't in the "processed" list, add them to the list to prevent future duplicates.
 
         if unique_display_usernames == []:  # Check if the usernames list is empty
             self.username_entry = CTk.CTkEntry(self.home_frame1, fg_color="#73ace0", border_color="#6aa5db", text_color=FONT_COLOUR, corner_radius=10)
@@ -2156,7 +2346,7 @@ class Home:
 
 # Main function for starting the program.
 def main(): 
-    global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DEFAULT_FONT, SEMIBOLD_DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
+    global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DISABLED_FONT_COLOUR, DEFAULT_FONT, SEMIBOLD_DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
     global full_directory, initial_pdf_directory, INITIAL_PDF_NAME, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
     global users, overwrite_score, quiz_paused, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, enable_trigonometry, enable_algebra, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
 
@@ -2165,7 +2355,7 @@ def main():
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "4.0.0"
+    APP_VERSION = "4.1.0"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
@@ -2186,6 +2376,7 @@ def main():
     MENU_ACTIVE_FG = "#FFFFFF"                  # Set the foreground colour to be used for active menu items.
     MENU_HOVER = "#a3cbf5"                      # Set the hover colour to be used for all menu items.
     FONT_COLOUR = "#FFFFFF"                     # Set the font colour to be used for all CTk elements.
+    DISABLED_FONT_COLOUR = "#a3cbf5"            # Set the font colour to be used for all disabled CTk elements, such as buttons.
     
     # Default program font
     available_fonts = font.families()  # Get a list of available fonts on the system.
