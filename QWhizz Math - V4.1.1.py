@@ -107,15 +107,23 @@ class Tools:
     # Method for clearing all widgets or clearing specified widgets (column, row).
     def clear_widget(self, procedure, all_widgets, element, column, row, command):
         if command != None: command()  # Go to the specified procedure from passed command if it is specified.
-        if all_widgets == True:
-            # Clear all page content
+        if all_widgets == True and element == None:
+            # Clear all page content.
             for widget in main_window.winfo_children():
                 widget.destroy()
             if procedure != None: procedure()  # Go to the specified procedure from button command if it is specified.
+        
+        elif all_widgets == True and element != None:
+            # Clear all content of the specified element.
+            for widget in element.winfo_children():
+                widget.destroy()
+            if procedure != None: procedure()  # Go to the specified procedure from button command if it is specified.
+        
         elif all_widgets == False:
             # Find all widgets in the specified row and column of a specified element.
             for widget in element.grid_slaves(column=column, row=row):
                 widget.destroy()  # Destroy the widgets occupying the specified space.
+            if procedure != None: procedure()  # Go to the specified procedure from button command if it is specified.
 
 
     # Method for handling mouse button 1 click events.
@@ -148,10 +156,11 @@ class Tools:
         return  # Exit the function after handling the error control for temporary storage mode.
 
     
-    # Function for loading the "users" and "settings" lists from the JSON files.
+    # Procedure for loading the "users" and "settings" lists from the JSON files.
     def load_details(self, file_name, file_dir, file_data):
             global data_loaded, users, settings, timer, enable_trigonometry, enable_algebra, deletion_history_states
-            
+            self.loading_status = [None, None]  # Variable list to indicate if the file needs to be replaced, so that repeated file replacement code isn't used.
+
             # Check if the JSON file exists. If not, create it.
             if not os.path.exists(file_dir):   
                 response1 = messagebox.askyesno("File Not Found", f"The {file_name} file cannot be found. Do you want to create a new one?")
@@ -198,7 +207,7 @@ class Tools:
                     
                     error_type = None
                     for index, details in enumerate(users):
-                        if len(details) != 7:  # Check all entries to make sure they each contain 7 elements.
+                        if len(details) != 7:  # Check if the number of elements for each entry is not 7.
                             error_type = 1
                             response2 = messagebox.askyesno("Invalid Data", f"The {file_name} file contains invalid data:\nEntry #{index+1} is invalid (expected 7 elements, got {len(details)}).\n\nWould you like to remove this entry?")                 
                         elif len(details[6]) != int(details[3]):  # Check if the number of saved questions is less than the recommended number of questions in any user's saved quiz.
@@ -206,7 +215,7 @@ class Tools:
                             response2 = messagebox.askyesno("Invalid Data", f"The {file_name} file contains invalid data:\nEntry #{index+1} has an invalid list of saved questions (expected {details[3]} questions, got {len(details[6])}).\n\nWould you like to remove this entry?")
                         
                         if error_type != None:
-                            if response2:
+                            if response2 == True:
                                 # Remove invalid entries and update the scoreboard file.
                                 users = [details for details in users if len(details) == 7] if error_type == 1 else [details for details in users if len(details[6]) == details[3]]
                                 with open(file_dir, "w") as file:           # Open the JSON file in write mode ("w").
@@ -237,33 +246,7 @@ class Tools:
             # Error control for instances such as the JSON file having invalid data, having incorrect formatting, or being corrupted.
             except json.JSONDecodeError as JSONDecodeError:
                 response3 = messagebox.askyesno("File Error", f"Failed to decode JSON data. The {file_name} file may be corrupted or improperly formatted. Do you want to replace it?\n\n{JSONDecodeError}\n\n{full_directory}")  # Show an error message if the JSON file cannot be decoded, asking the user if they want to replace the file.
-                if response3 == True:
-                    try:
-                        with open(file_dir, "w") as file:  # Open the shortened_directory file in write mode ("w").
-                            if file_data == "users": json.dump([], file)                                # Write an empty list to the new JSON file.
-                            elif file_data == "settings": json.dump(default_settings, file, indent=4)   # Write an empty list to the new JSON file.
-                            file.close()    # Close the file after writing to it.
-                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
-                        data_loaded = True  # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
-                        messagebox.showinfo("File Replaced", f"The JSON {file_name} file has been successfully replaced and restored to defaults.\n\n{full_directory}")
-                    
-                    # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
-                    except IOError as io_error:
-                        messagebox.showerror("File Error", f"An error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be replaced.
-                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
-                        data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-                    
-                    # Error control for any other exceptions that may occur.
-                    except Exception as e:                                  
-                        messagebox.showerror("Unexpected Error", f"An unexpected error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
-                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
-                        data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-                    return
-                else:
-                    messagebox.showwarning("Temporary Storage Mode", f"The program will run in temporary storage mode until the {file_name} file is created or replaced.\n\n{full_directory}")  # Show a warning message if the user does not want to create a new file.
-                    self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
-                    data_loaded = False      # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-                    return
+                self.loading_status = ["Error", "Replace"] if response3 == True else ["Error", None]  # Set the loading status based on the user's choice, adding "Replace" to the second element of the list if the user wants to replace the file.
             
             # Error control for instances such as the file being inaccessible or lacking the permission to read it.
             except IOError as io_error:
@@ -274,33 +257,38 @@ class Tools:
             # Error control for any other exceptions that may occur.
             except Exception as e:
                 response3 = messagebox.askyesno("Unexpected Error", f"An unexpected error occurred while reading the {file_name} file. Do you want to replace it?")  # Show an error message if there is an unexpected error.
-                if response3 == True:
-                    try:
-                        with open(file_dir, "w") as file:  # Open the shortened_directory file in write mode ("w").
-                            if file_data == "users": json.dump([], file)                                # Write an empty list to the new JSON file.
-                            elif file_data == "settings": json.dump(default_settings, file, indent=4)   # Write an empty list to the new JSON file.
-                            file.close()    # Close the file after writing to it.
-                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
-                        data_loaded = True  # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
-                        messagebox.showinfo("File Replaced", f"The JSON {file_name} file has been successfully replaced and restored to defaults.\n\n{full_directory}")
-                    
-                    # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
-                    except IOError as io_error:
-                        messagebox.showerror("File Error", f"An error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be replaced.
-                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
-                        data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-                    
-                    # Error control for any other exceptions that may occur.
-                    except Exception as e:
-                        messagebox.showerror("Unexpected Error", f"An unexpected error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
-                        self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
-                        data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-                    return
-                else:
-                    messagebox.showwarning("Temporary Storage Mode", f"The program will run in temporary storage mode until the {file_name} file is created or replaced.\n\n{full_directory}")  # Show a warning message if the user does not want to create a new file.
+                self.loading_status = ["Error", "Replace"] if response3 == True else ["Error", None]  # Set the loading status based on the user's choice, adding "Replace" to the second element of the list if the user wants to replace the file.
+            
+            if self.loading_status[0] == "Error" and self.loading_status[1] == "Replace":  # Check if there is a loading error and that the user chose to replace the file.
+                try:
+                    with open(file_dir, "w") as file:  # Open the shortened_directory file in write mode ("w").
+                        if file_data == "users": json.dump([], file)                                # Write an empty list to the new JSON file.
+                        elif file_data == "settings": json.dump(default_settings, file, indent=4)   # Write an empty list to the new JSON file.
+                        file.close()    # Close the file after writing to it.
                     self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
-                    data_loaded = False      # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
-                    return
+                    data_loaded = True  # Set the "data_loaded" variable to True, so that the program doesn't reload data again from the JSON file before it is accessed.
+                    messagebox.showinfo("File Replaced", f"The JSON {file_name} file has been successfully replaced and restored to defaults.\n\n{full_directory}")
+                
+                # Error control for instances such as the file being inaccessible or lacking the permission to read/write it.
+                except IOError as io_error:
+                    messagebox.showerror("File Error", f"An error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{io_error}\n\n{full_directory}")  # Show an error message if the file cannot be replaced.
+                    self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                    data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                
+                # Error control for any other exceptions that may occur.
+                except Exception as e:                                  
+                    messagebox.showerror("Unexpected Error", f"An unexpected error occurred while replacing the {file_name} file, program will run in temporary storage mode.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
+                    self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                    data_loaded = False  # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                self.loading_status = [None, None]  # Reset both values in the "loading_status" list to None.
+                return
+            
+            elif self.loading_status[0] == "Error" and self.loading_status[1] == None:  # Check if there is a loading error and that the user did not choose to replace the file.
+                messagebox.showwarning("Temporary Storage Mode", f"The program will run in temporary storage mode until the {file_name} file is replaced.\n\n{full_directory}")  # Show a warning message if the user does not want to create a new file.
+                self.error_control(file_name, file_dir, file_data, "Temporary")  # Call the error control function to handle temporary storage mode, which will clear the "users" list and add the default values to the "settings" dictionary.
+                data_loaded = False      # Set the "data_loaded" variable to false, so that the program will reload data from the JSON file when it next needs to be accessed.
+                self.loading_status = [None, None]  # Reset both values in the "loading_status" list to None.
+                return
 
 
     # Function for validating user details and making sure there are no invalid entries inside any entry boxes.
@@ -313,7 +301,7 @@ class Tools:
         adjust_entry = False
         
         # Clear any previous error labels by using the "clear_widget" method.
-        self.clear_widget(None, False, self.home.home_frame1, 2, 0, None)
+        self.clear_widget(None, False, self.home.home_frame1, 2, 0, None)  # Clear all current widgets in the home frame on column 2, row 0 (passing "False" means the program will rely on the specified element, column, and row to clear the widgets from).
         
         if username == "":  # Check if the username is empty.
             warning_messages.append("is required and cannot be left blank")  # Show a warning message if the username is empty.
@@ -427,9 +415,9 @@ class Tools:
                         except Exception as e:                       # Error control for any other exceptions that may occur.
                             messagebox.showerror("Unexpected Error", f"An unexpected error occurred while writing to 'settings.json'.\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
                             return
-                self.clear_widget(lambda: self.quiz.setup_quiz(None), True, None, None, None, None)
+                self.clear_widget(lambda: self.quiz.setup_quiz(None), False, main_window, 1, 0, None)  # Clear all current widgets in the main window on column 1, row 0 (passing "False" means the program will rely on the specified element, column, and row to clear the widgets from), then go to the home page.
             elif procedure == "Scoreboard":
-                self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
+                self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the scoreboard page.
             else:
                 return  # If the procedure is not "Quiz" or "Scoreboard", do nothing and return.
 
@@ -575,7 +563,7 @@ class Tools:
                     users = []
                     redo_stack.clear()  # Clear the "redo_stack" list to prevent any redo actions directly after deletion.
                     self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
-                    self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
+                    self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets) to refresh the scoreboard page.
                     messagebox.showinfo("Scores Deleted", "All recorded scores have been deleted.")
                 else:
                     return
@@ -608,7 +596,7 @@ class Tools:
                         users_to_delete.clear()  # Clear the list of users to delete.
                         
                         self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
-                        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
+                        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets) to refresh the scoreboard page.
                         messagebox.showinfo("Scores Deleted", f"The selected {words[0]} {words[1]} been deleted.")
                     else:
                         return
@@ -632,7 +620,7 @@ class Tools:
             users.insert(index, user)
         
         self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
-        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
+        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets) to refresh the scoreboard page.
 
 
     # Method for redoing the deletion of scores that were previously undone.
@@ -650,7 +638,7 @@ class Tools:
             del users[index]  # Delete the user from the "users" list at the specified index.
         
         self.save_details(None, "Scoreboard", None, SCOREBOARD_FILE_PATH)
-        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)
+        self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets) to refresh the scoreboard page.
 
 
     # Method for resetting details specific to the specified window.
@@ -695,7 +683,7 @@ class Tools:
             main_window.unbind(key)
 
 
-    # Method for configuring the timer label state (enabled/disabled).
+    # Function for configuring the timer label state (enabled/disabled).
     # Unique identifiers are passed in "origin" to differentiate between the "Quiz" and "Completion" classes to manage their relevant timer labels.
     def timer_config(self, origin, command, procedure):
         if origin == "Quiz":
@@ -810,6 +798,15 @@ class Scoreboard:
 
 
     def setup_scoreboard(self):
+        global banners_loaded
+        banners_loaded = False  # Reset the flag to indicate that the banners have not been loaded yet, so that going to the home or quiz page will reload them.
+
+        # Setting the main window geometry (size) before element creation ensures the window doesn't glitch between sizes.
+        if int(len(users)) > 8:
+            main_window.geometry("868x411")  # Final size calculated based on the window size seen after the elements are all created, including the scrollbar when the users list is above 8.
+        else:
+            main_window.geometry("852x411")  # Final size calculated based on the window size seen after the elements are all created, excluding the scrollbar when the users list is at or below 8.
+        
         # Set width for columns 0-1 (2 total) in the main window. Positive weight means the column will expand to fill the available space.
         main_window.columnconfigure(0, weight=1, minsize=850)
         main_window.columnconfigure(1, weight=1, minsize=0)
@@ -1020,6 +1017,11 @@ class Completion:
 
 
     def setup_completion(self):
+        global banners_loaded
+
+        # Setting the main window geometry (size) before element creation ensures the window doesn't glitch between sizes.
+        main_window.geometry("758x434")  # Final size calculated based on the window size seen after the elements are all created.
+        
         # Set width for columns 0-1 (2 total) in the main window. Positive weight means the column will expand to fill the available space.
         main_window.columnconfigure(0, weight=1, minsize=0)
         main_window.columnconfigure(1, weight=1, minsize=450)
@@ -1051,23 +1053,26 @@ class Completion:
 
         main_window.config(menu=completion_menubar)
 
-        # Banner creation (left side)
-        lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0))
-        lbanner = Image.open("AppData/Images/lbanner.png")
-        lbanner = ImageTk.PhotoImage(lbanner)
-        lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
-        lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
-        lbanner_canvas.image = lbanner
+        if banners_loaded == False:
+            # Banner creation (left side)
+            lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+            lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0), pady=27)
+            lbanner = Image.open("AppData/Images/lbanner.png")
+            lbanner = ImageTk.PhotoImage(lbanner)
+            lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
+            lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
+            lbanner_canvas.image = lbanner
 
-        # Banner creation (right side)
-        rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20))
-        rbanner = Image.open("AppData/Images/rbanner.png")
-        rbanner = ImageTk.PhotoImage(rbanner)
-        rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
-        rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
-        rbanner_canvas.image = rbanner
+            # Banner creation (right side)
+            rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+            rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20), pady=27)
+            rbanner = Image.open("AppData/Images/rbanner.png")
+            rbanner = ImageTk.PhotoImage(rbanner)
+            rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
+            rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
+            rbanner_canvas.image = rbanner
+
+            banners_loaded = True
 
         # Set up the main content frame to place the main completion frames and elements inside.
         self.main_content_frame = CTk.CTkFrame(main_window, fg_color="transparent")
@@ -1222,16 +1227,16 @@ class Quiz:
             self.question_no = 1
             self.score = 0
             if command == "Home":
-                self.tools.clear_widget(self.home.setup_homepage, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the home page.
+                self.tools.clear_widget(self.home.setup_homepage, False, main_window, 1, 0, None)  # Clear all current widgets in the main window on column 1, row 0 (passing "False" means the program will rely on the specified element, column, and row to clear the widgets from), then go to the home page.
             elif command == "Scoreboard":
                 self.tools.reset_details("Quiz", "User Reset")  # Clear the quiz and user details (passing "Quiz" as the origin and "User Reset" as the action so that going home from the scoreboard won't reuse the user details of the viewed or retried quiz).
                 self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the scoreboard page.
         elif command == "New Quiz":
             self.tools.reset_details("Quiz", "New")  # Pass "New" action so that all quiz details are cleared.
-            self.tools.clear_widget(lambda: self.setup_quiz(None), True, None, None, None, None)
+            self.tools.clear_widget(lambda: self.setup_quiz(None), False, main_window, 1, 0, None)
         elif command == "Restart Quiz":
             self.tools.reset_details("Quiz", "Restart")  # Pass "Restart" action so that the question details aren't cleared.
-            self.tools.clear_widget(lambda: self.setup_quiz("Restart Quiz"), True, None, None, None, None)
+            self.tools.clear_widget(lambda: self.setup_quiz("Restart Quiz"), False, main_window, 1, 0, None)
         return
 
 
@@ -1303,6 +1308,8 @@ class Quiz:
                     # For each question in the saved quiz from the "users" list, append the 6 elements of the question to the "question_details" list (this excludes the original user answer [7th element]).
                     for question in users[index][6]:
                         question_details.append(question[:6])
+                    
+                    self.tools.clear_widget(lambda: self.setup_quiz("Retry Quiz"), True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the quiz page.
             
             elif origin == "Completion":
                 overwrite_score = True
@@ -1311,7 +1318,7 @@ class Quiz:
                 self.score = 0
                 self.reset_timer(None, None)
 
-            self.tools.clear_widget(lambda: self.setup_quiz("Retry Quiz"), True, None, None, None, None)
+                self.tools.clear_widget(lambda: self.setup_quiz("Retry Quiz"), False, main_window, 1, 0, None)  # Clear all current widgets in the main window on column 1, row 0 (passing "False" means the program will rely on the specified element, column, and row to clear the widgets from), then go to the quiz page.
         
         elif mode == "View Answers":
             if origin == "Scoreboard":
@@ -1349,6 +1356,7 @@ class Quiz:
                         random.shuffle(answer_choices)
                         self.all_answers.append(answer_choices)
                     
+                    self.tools.clear_widget(lambda: self.setup_quiz("View Answers"), True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the quiz page.
             
             elif origin == "Completion":
                 self.answer_viewing_active = True
@@ -1360,8 +1368,8 @@ class Quiz:
                     answer_choices = [question[4]] + question[5]
                     random.shuffle(answer_choices)
                     self.all_answers.append(answer_choices)
-
-            self.tools.clear_widget(lambda: self.setup_quiz("View Answers"), True, None, None, None, None)
+                
+                self.tools.clear_widget(lambda: self.setup_quiz("View Answers"), False, main_window, 1, 0, None)  # Clear all current widgets in the main window on column 1, row 0 (passing "False" means the program will rely on the specified element, column, and row to clear the widgets from), then go to the quiz page.
 
 
     # Method for running the timer loop, which updates the elapsed time and timer label every second.
@@ -1592,7 +1600,7 @@ class Quiz:
                 else:
                     self.tools.reset_details("Completion", None)    # Clear the quiz and user details (passing "Completion" as the origin)
                     self.tools.reset_details("Quiz", "Scoreboard")  # Clear the extra quiz details (passing "Scoreboard" as the origin)
-                    self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the completion page.
+                    self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the scoreboard page.
         
             else:
                 self.current_index = self.question_no - 1  # Remove 1 to correctly index from the "question_details" list (since lists start at index 0, but the question numbers start at 1).
@@ -1644,10 +1652,11 @@ class Quiz:
             else:
                 self.stop_timer(None, "Quiz")
                 self.tools.reset_details("Quiz", None)
-                self.tools.clear_widget(self.completion.submit_details, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the completion page.
+                self.tools.clear_widget(self.completion.submit_details, False, main_window, 1, 0, None)  # Clear all current widgets in the main window on column 1, row 0 (passing "False" means the program will rely on the specified element, column, and row to clear the widgets from), then go to the completion page.
         return
 
 
+    # Method for generating the hard mode questions.
     def hard_mode(self):
         global question_details, temp_fake_answers
 
@@ -1747,6 +1756,7 @@ class Quiz:
         return
     
 
+    # Method for generating the medium mode questions.
     def medium_mode(self):
         global question_details, temp_fake_answers
 
@@ -1857,6 +1867,7 @@ class Quiz:
         return
 
 
+    # Method for generating the easy mode questions.
     def easy_mode(self):
         global question_details, temp_fake_answers
 
@@ -1942,7 +1953,7 @@ class Quiz:
 
     # Procedure for setting up the UI elements consisting of images, labels, entry boxes, sliders (scales), and buttons.
     def setup_quiz(self, scenario):
-        global quiz_paused
+        global quiz_paused, banners_loaded
         quiz_paused = False  # Set the flag to indicate that the quiz is not paused.
 
         if scenario != "Restart Quiz" and scenario != "Retry Quiz" and scenario != "View Answers":  # Ensure that questions are not generated again when restarting or retrying the quiz.
@@ -1953,6 +1964,9 @@ class Quiz:
                 self.medium_mode()
             elif difficulty == "Hard":
                 self.hard_mode()
+
+        # Setting the main window geometry (size) before element creation ensures the window doesn't glitch between sizes.
+        main_window.geometry("758x434")  # Final size calculated based on the window size seen after the elements are all created.
 
         # Set width for columns 0-1 (2 total) in the main window. Positive weight means the column will expand to fill the available space.
         main_window.columnconfigure(0, weight=1, minsize=0)
@@ -1998,23 +2012,26 @@ class Quiz:
         main_window.bind("<Escape>", lambda e: self.exit_quiz("Scoreboard" if self.answer_viewing_active == True or self.retry_active == True else "Home", "Quiz"))              # Bind Escape to exit the quiz and return to the home page.
         self.binded_keys = ["<Control-r>", "<Control-n>", "<Escape>"]                       # Create a list of binded keys to be used later for unbinding them when the user goes to a different page.
 
-        # Banner creation (left side)
-        lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0))
-        lbanner = Image.open("AppData/Images/lbanner.png")
-        lbanner = ImageTk.PhotoImage(lbanner)
-        lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
-        lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
-        lbanner_canvas.image = lbanner
+        if banners_loaded == False:
+            # Banner creation (left side)
+            lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+            lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0), pady=27)
+            lbanner = Image.open("AppData/Images/lbanner.png")
+            lbanner = ImageTk.PhotoImage(lbanner)
+            lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
+            lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
+            lbanner_canvas.image = lbanner
 
-        # Banner creation (right side)
-        rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20))
-        rbanner = Image.open("AppData/Images/rbanner.png")
-        rbanner = ImageTk.PhotoImage(rbanner)
-        rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
-        rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
-        rbanner_canvas.image = rbanner
+            # Banner creation (right side)
+            rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+            rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20), pady=27)
+            rbanner = Image.open("AppData/Images/rbanner.png")
+            rbanner = ImageTk.PhotoImage(rbanner)
+            rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
+            rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
+            rbanner_canvas.image = rbanner
+
+            banners_loaded = True
 
         # Set up the main content frame to place the main quiz frames and elements inside.
         self.main_content_frame = CTk.CTkFrame(main_window, fg_color="transparent")
@@ -2154,7 +2171,7 @@ class Home:
         self.quiz = quiz_instance               # Store a reference to the "Quiz" class instance.
 
 
-    # Method for processing slider values and returning a tuple containing the difficulty, color, and hover color, or the number of questions.
+    # Function for processing slider values and returning a tuple containing the difficulty, color, and hover color, or the number of questions.
     def process_slider_value(self, slider_id, value):
         global difficulty
         if slider_id == "S1":
@@ -2194,10 +2211,12 @@ class Home:
 
     # Procedure for setting up the UI elements consisting of images, labels, entry boxes, sliders (scales), and buttons.
     def setup_homepage(self):
-        global users, deiconify_reqd
+        global users, deiconify_reqd, banners_loaded
+
+        # Setting the main window geometry (size) before element creation ensures the window doesn't glitch between sizes.
+        main_window.geometry("758x434")  # Final size calculated based on the window size seen after the elements are all created.
 
         # Set width for columns 0-1 (2 total) in the main window. Positive weight means the column will expand to fill the available space.
-        # Setting the main window size before element creation ensures the window doesn't glitch between sizes.
         main_window.columnconfigure(0, weight=1, minsize=0)
         main_window.columnconfigure(1, weight=1, minsize=450)
         main_window.columnconfigure(2, weight=1, minsize=0)
@@ -2229,23 +2248,26 @@ class Home:
 
         main_window.config(menu=home_menubar)
 
-        # Banner creation (left side)
-        lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0), pady=27)
-        lbanner = Image.open("AppData/Images/lbanner.png")
-        lbanner = ImageTk.PhotoImage(lbanner)
-        lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
-        lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
-        lbanner_canvas.image = lbanner
+        if banners_loaded == False:
+            # Banner creation (left side)
+            lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+            lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0), pady=27)
+            lbanner = Image.open("AppData/Images/lbanner.png")
+            lbanner = ImageTk.PhotoImage(lbanner)
+            lbanner_canvas.configure(width=lbanner.width()+2, height=lbanner.height())  # Add 2 pixels to width to prevent image clipping on the right of image.
+            lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
+            lbanner_canvas.image = lbanner
 
-        # Banner creation (right side)
-        rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
-        rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20), pady=27)
-        rbanner = Image.open("AppData/Images/rbanner.png")
-        rbanner = ImageTk.PhotoImage(rbanner)
-        rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
-        rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
-        rbanner_canvas.image = rbanner
+            # Banner creation (right side)
+            rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
+            rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20), pady=27)
+            rbanner = Image.open("AppData/Images/rbanner.png")
+            rbanner = ImageTk.PhotoImage(rbanner)
+            rbanner_canvas.configure(width=rbanner.width()+2, height=rbanner.height())  # Add 2 pixels to width to prevent image clipping on the left of image.
+            rbanner_canvas.create_image(rbanner.width() / 2, rbanner.height() / 2, anchor=CENTER, image=rbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
+            rbanner_canvas.image = rbanner
+
+            banners_loaded = True
 
         # Set up the main content frame to place the main home frames and elements inside.
         self.main_content_frame = CTk.CTkFrame(main_window, fg_color="transparent")
@@ -2348,14 +2370,14 @@ class Home:
 def main(): 
     global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DISABLED_FONT_COLOUR, DEFAULT_FONT, SEMIBOLD_DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
     global full_directory, initial_pdf_directory, INITIAL_PDF_NAME, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
-    global users, overwrite_score, quiz_paused, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, enable_trigonometry, enable_algebra, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
+    global users, overwrite_score, quiz_paused, banners_loaded, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, enable_trigonometry, enable_algebra, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
 
     # Get the operating system name to manage functionalities in the program with limited support for multiple operating systems.
     # When run on Linux, this will return "Linux". On macOS, this will return "Darwin". On Windows, this will return "Windows".
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "4.1.0"
+    APP_VERSION = "4.1.1"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
@@ -2394,6 +2416,7 @@ def main():
     users = []                              # Create empty list for user details and their quiz results to be stored inside.
     overwrite_score = True                  # Initialise a flag to track whether a score should be overwritten or not if a user already exists with the same username and difficulty.
     quiz_paused = False                     # Initialise a flag to track whether the quiz is paused or not.
+    banners_loaded = False                  # Initialise a flag to track whether the banner images have been loaded or not, so that they aren't reloaded when switching between pages that both use the banenr images.
     username = None                         # Initialise the username attribute as None.
     difficulty_num = None                   # Initialise the difficulty_num attribute as None.
     question_amount = None                  # Initialise the question_amount attribute as None.
@@ -2439,13 +2462,13 @@ def main():
     
     quiz_page.home = home_page                      # Link the "home_page" instance to the "quiz_page" instance to allow access to "Home" class attributes and methods from within the "Quiz" class.
 
-    # Load the data from the JSON files and start the home page.
+    # Load the data from the JSON files and setup the home page.
     tools.load_details("scoreboard", SCOREBOARD_FILE_PATH, "users")     # Load the user scores from the scoreboard.json file.
     tools.load_details("settings", SETTINGS_FILE_PATH, "settings")      # Load the settings from the settings.json file.
     main_window.configure(bg=MAIN_WINDOW_BG)                            # Configure the main window to use the background colour (value) of the "MAIN_WINDOW_BG variable".
     home_page.setup_homepage()                                          # Call the "setup_homepage" method from the "home_page" class instance to set up the home page UI elements.
 
-    # Start the CTkinter event loop so that the GUI window stays open.
+    # Start the Tkinter event loop so that the GUI window stays open.
     main_window.mainloop()
 
 
