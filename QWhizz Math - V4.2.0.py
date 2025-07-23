@@ -1,4 +1,4 @@
-# Date Created: 25/06/2025
+# Date Created: 13/07/2025
 # Author: Jack Compton
 # Purpose: GUI application for Flow Computing that helps students with their mathematics.
 
@@ -102,6 +102,7 @@ class Tools:
         self.completion = completion_instance   # Store a reference to the "Completion" class instance.
         self.quiz = quiz_instance               # Store a reference to the "Quiz" class instance.
         self.home = homepage_instance           # Store a reference to the "Home" class instance.
+        self.button_pressed = False             # Flag variable to store whether a button is currently being pressed.
 
 
     # Method for clearing all widgets or clearing specified widgets (column, row).
@@ -126,6 +127,13 @@ class Tools:
             if procedure != None: procedure()  # Go to the specified procedure from button command if it is specified.
 
 
+    # Method for handling mouse button 1 release events.
+    def on_mbtn1_release(self, origin, element):
+        if origin == "Scoreboard":
+            if element == "Scrollbar":
+                self.scoreboard.scrollbar.configure(button_color=BUTTON_FG, button_hover_color=BUTTON_HOVER)  # Change the scrollbar button colour back to a light blue when released.
+
+
     # Method for handling mouse button 1 click events.
     def on_mbtn1_click(self, origin, element):
         if origin == "Scoreboard":
@@ -133,11 +141,50 @@ class Tools:
                 self.scoreboard.scrollbar.configure(button_color=BUTTON_CLICKED, button_hover_color=BUTTON_CLICKED)  # Change the scrollbar button colour to a darker blue when clicked and/or held.
 
 
-    # Method for handling mouse button 1 release events.
-    def on_mbtn1_release(self, origin, element):
-        if origin == "Scoreboard":
-            if element == "Scrollbar":
-                self.scoreboard.scrollbar.configure(button_color=BUTTON_FG, button_hover_color=BUTTON_HOVER)  # Change the scrollbar button colour back to a light blue when released.
+    # Method for handling the event of the mouse cursor leaving (hovering away from) a button.
+    def on_ctkbutton_leave(self, button):
+        self.cursor_over_button = False
+        if self.button_pressed == False:
+            button.configure(fg_color=BUTTON_FG)
+        return
+
+
+    # Method for handling the event of the mouse cursor entering (hovering over) a button.
+    def on_ctkbutton_enter(self, button):
+        self.cursor_over_button = True
+        button.configure(fg_color=BUTTON_CLICKED) if self.button_pressed == True else button.configure(fg_color=BUTTON_HOVER)
+        button.bind("<Leave>", lambda e: self.on_ctkbutton_leave(button))
+        return
+    
+
+    # Method for handling the event of the left mouse button being released over a button.
+    def on_ctkbutton_release(self, button, sizes, command):
+        self.button_pressed = False
+        
+        # Ensure that when releasing the button, the forground colour is set to the hover colour if the mouse cursor is still hovering over the button, otherwise it is set to the original colour.
+        if self.cursor_over_button == True:
+            # Change the button colour back to its original colour and size (animated buttons only) when released.
+            button.configure(fg_color=BUTTON_HOVER, width=sizes[0], height=sizes[1], font=(DEFAULT_FONT, sizes[2], "bold")) if sizes != None else button.configure(fg_color=BUTTON_HOVER)
+        else:
+            # Change the button colour back to its original colour and size (animated buttons only) when released.
+            button.configure(fg_color=BUTTON_FG, width=sizes[0], height=sizes[1], font=(DEFAULT_FONT, sizes[2], "bold")) if sizes != None else button.configure(fg_color=BUTTON_FG)
+        
+        button.unbind("<ButtonRelease-1>")
+        if command != None: command()
+        return
+
+
+    # Method for handling the event of a button being clicked (command is sent from the button rather than checking if the cursor specifically clicks on the button).
+    def on_ctkbutton_click(self, button, sizes, command):  # Sizes is a list containing the width, height and font size of the button.
+        self.cursor_over_button = True
+        self.button_pressed = True
+        
+        # Change the button colour and size when clicked and/or held. Non-animated buttons will pass None as the "sizes" variable.
+        button.configure(fg_color=BUTTON_CLICKED, width=sizes[0]*0.9, height=sizes[1]*0.9, font=(DEFAULT_FONT, sizes[2]*0.9, "bold")) if sizes != None else button.configure(fg_color=BUTTON_CLICKED)
+        
+        button.bind("<Leave>", lambda e: self.on_ctkbutton_leave(button))
+        button.bind("<ButtonRelease-1>", lambda e: self.on_ctkbutton_release(button, sizes, command))
+        return
 
 
     # Method for handling errors and preventing repeated code.
@@ -732,15 +779,15 @@ class About:
         if os.path.exists("AppData/Images/icon.png"):  # Check if the icon file exists before setting it.
             self.about_window.iconphoto(False, PhotoImage(file="AppData/Images/icon.png"))  # Set the title bar icon for the "About" window.
         self.about_window.title("About")
-        self.about_window.columnconfigure(0, weight=0, minsize=300)
+        self.about_window.geometry("320x157")  # Set the size of the "About" window, calculated by finding the size after the child elements have been added.
         self.about_window.resizable(False, False)
         self.about_window.update_idletasks()  # Process any pending events for the window to make sure the geometry info is up-to-date before calculating the centre position later.
         
         # Centre the "About" window above the main window.
-        self.x = main_window.winfo_x() + main_window.winfo_width() // 2 - self.about_window.winfo_width() // 2 - 60
+        self.x = main_window.winfo_x() + main_window.winfo_width() // 2 - self.about_window.winfo_width() // 2
         self.y = main_window.winfo_y() + main_window.winfo_height() // 2 - self.about_window.winfo_height() // 2 + 56
         self.about_window.geometry(f"+{self.x}+{self.y}")
-        self.about_window.transient(main_window)  # Keep on top of parent window (main_window)
+        self.about_window.transient(main_window)  # Keep on top of parent window (main_window).
         self.about_window.focus()  # Set focus to the "About" window so that it is ready for user interaction.
 
         # Create a frame inside the "About" window to hold the "about" details label.
@@ -750,7 +797,11 @@ class About:
         
         # Add program details and a close button.
         CTk.CTkLabel(self.about_frame, text=f"QWhizz Math\nVersion {APP_VERSION}\nMade by Jack Compton", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, justify="center").grid(row=0, column=0, sticky=EW, padx=10, pady=(20))
-        CTk.CTkButton(self.about_window, text="Close", command=lambda: self.close(), font=(DEFAULT_FONT, 14, "bold"), height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(row=1, column=0, sticky=EW, padx=10, pady=(5,10))
+        self.button_sizes = [300, 30, 14]  # Specify the sizing to be used for buttons (width, height, font size).
+        self.close_button = CTk.CTkButton(self.about_window, text="Close", command=lambda: self.tools.on_ctkbutton_click(self.close_button, self.button_sizes, lambda: self.close()),
+                                          width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=False, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
+        self.close_button.grid(row=1, column=0, padx=10, pady=(5,10))
+        self.close_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.close_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
         
         # Show the "About" window after setting its position and size and adding its contents. This prevents the window from flickering when it is created and shown.
         self.about_window.deiconify()
@@ -878,14 +929,27 @@ class Scoreboard:
         self.logo_canvas.image = self.logo
 
         # Create the buttons.
-        CTk.CTkButton(top_frame1, text="Delete", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.tools.delete_details(self.sel_reference_numbers),
-                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=1, row=0, sticky=EW, padx=(0,5), pady=(0,5))
-        CTk.CTkButton(top_frame1, text="Home", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.tools.clear_widget(self.home.setup_homepage, True, None, None, None, self.tools.unbind_keys(self.binded_keys)),
-                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=2, row=0, sticky=EW, padx=(5,0), pady=(0,5))
-        CTk.CTkButton(top_frame1, text="View Answers", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.quiz.review_quiz("View Answers", "Scoreboard", self.sel_reference_numbers),
-                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=1, row=1, sticky=EW, padx=(0,5), pady=(5,0))
-        CTk.CTkButton(top_frame1, text="Retry Quiz", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=lambda: self.quiz.review_quiz("Retry", "Scoreboard", self.sel_reference_numbers),
-                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER).grid(column=2, row=1, sticky=EW, padx=(5,0), pady=(5,0))
+        self.button_sizes = [200, 30, 14]  # Specify the sizing to be used for buttons (width, height, font size).
+
+        self.delete_button = CTk.CTkButton(top_frame1, text="Delete", command=lambda: self.tools.on_ctkbutton_click(self.delete_button, self.button_sizes, lambda: self.tools.delete_details(self.sel_reference_numbers)),
+                      width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=False, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
+        self.delete_button.grid(column=1, row=0, padx=(0,5), pady=(0,5))
+        self.delete_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.delete_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
+        
+        self.home_button = CTk.CTkButton(top_frame1, text="Home", command=lambda: self.tools.on_ctkbutton_click(self.home_button, self.button_sizes, lambda: self.tools.clear_widget(self.home.setup_homepage, True, None, None, None, self.tools.unbind_keys(self.binded_keys))),
+                      width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=False, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
+        self.home_button.grid(column=2, row=0, padx=(5,0), pady=(0,5))
+        self.home_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.home_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
+        
+        self.answers_button = CTk.CTkButton(top_frame1, text="View Answers", command=lambda: self.tools.on_ctkbutton_click(self.answers_button, self.button_sizes, lambda: self.quiz.review_quiz("View Answers", "Scoreboard", self.sel_reference_numbers)),
+                      width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=False, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
+        self.answers_button.grid(column=1, row=1, padx=(0,5), pady=(5,0))
+        self.answers_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.answers_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
+
+        self.retry_button = CTk.CTkButton(top_frame1, text="Retry Quiz", command=lambda: self.tools.on_ctkbutton_click(self.retry_button, self.button_sizes, lambda: self.quiz.review_quiz("Retry", "Scoreboard", self.sel_reference_numbers)),
+                      width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=False, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
+        self.retry_button.grid(column=2, row=1, padx=(5,0), pady=(5,0))
+        self.retry_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.retry_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
 
         # Reload the user scores from the scoreboard.json file.
         self.tools.load_details("scoreboard", SCOREBOARD_FILE_PATH, "users")
@@ -1114,14 +1178,27 @@ class Completion:
         button_frame.columnconfigure(1, weight=1, minsize=205)
 
         # Create the buttons.
-        CTk.CTkButton(button_frame, text="View Answers", command=lambda: self.quiz.review_quiz("View Answers", "Completion", None),
-                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=0, sticky=EW, padx=(0,5), pady=(0,5))
-        CTk.CTkButton(button_frame, text="Retry Quiz", command=lambda: self.quiz.review_quiz("Retry", "Completion", None),
-                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=1, row=0, sticky=EW, padx=(5,0), pady=(0,5))
-        CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.quiz.reset_timer("Scoreboard", "Completion"),
-                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=EW, padx=(0,5), pady=(5,0))
-        CTk.CTkButton(button_frame, text="Home", command=lambda: self.quiz.reset_timer("Home", "Completion"),
-                      width=200, height=30, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=1, row=1, sticky=EW, padx=(5,0), pady=(5,0))
+        self.button_sizes = [200, 30, 14]  # Specify the sizing to be used for buttons (width, height, font size).
+
+        self.answers_button = CTk.CTkButton(button_frame, text="View Answers", command=lambda: self.tools.on_ctkbutton_click(self.answers_button, self.button_sizes, lambda: self.quiz.review_quiz("View Answers", "Completion", None)),
+                      width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=False, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
+        self.answers_button.grid(column=0, row=0, padx=(0,5), pady=(0,5))
+        self.answers_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.answers_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
+        
+        self.retry_button = CTk.CTkButton(button_frame, text="Retry Quiz", command=lambda: self.tools.on_ctkbutton_click(self.retry_button, self.button_sizes, lambda: self.quiz.review_quiz("Retry", "Completion", None)),
+                      width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=False, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
+        self.retry_button.grid(column=1, row=0, padx=(5,0), pady=(0,5))
+        self.retry_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.retry_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
+        
+        self.scoreboard_button = CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.tools.on_ctkbutton_click(self.scoreboard_button, self.button_sizes, lambda: self.quiz.reset_timer("Scoreboard", "Completion")),
+                      width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=False, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
+        self.scoreboard_button.grid(column=0, row=1, padx=(0,5), pady=(5,0))
+        self.scoreboard_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.scoreboard_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
+        
+        self.home_button = CTk.CTkButton(button_frame, text="Home", command=lambda: self.tools.on_ctkbutton_click(self.home_button, self.button_sizes, lambda: self.quiz.reset_timer("Home", "Completion")),
+                      width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=False, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
+        self.home_button.grid(column=1, row=1, padx=(5,0), pady=(5,0))
+        self.home_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.home_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
 
 
 
@@ -1245,7 +1322,7 @@ class Quiz:
         quiz_paused = True  # Set the flag to indicate that the quiz is paused.
         self.stop_timer(None, None)
         self.pause_start_time = time.time()  # Record the real-world time for when the pause started.
-        self.pause_btn.configure(command=self.unpause_quiz, image=self.play_img)
+        self.pause_button.configure(command=lambda: self.tools.on_ctkbutton_click(self.pause_button, None, self.unpause_quiz), image=self.play_img)
         
         # Create a pause overlay to visually block the quiz content until the quiz is unpaused.
         height = self.question_frame.winfo_height() + self.answer_frame.winfo_height() + 10  # Get the total height of both frames (question and answer frames), including the height of padding.
@@ -1270,7 +1347,7 @@ class Quiz:
         # Remove the pause overlay and restore the pause button to its original command, then start the timer again.
         self.pause_frame.destroy()
         quiz_paused = False  # Set the flag to indicate that the quiz is unpaused.
-        self.pause_btn.configure(command=self.pause_quiz, image=self.pause_img)
+        self.pause_button.configure(command=lambda: self.tools.on_ctkbutton_click(self.pause_button, None, self.pause_quiz), image=self.pause_img)
         self.start_timer()     
 
 
@@ -1508,14 +1585,16 @@ class Quiz:
     def update_question(self):
         if self.answer_viewing_active == True:
             if self.question_no == 1:
-                self.previous_btn.configure(state="disabled")  # Disable the previous button for the first question since there is no previous question to go to.
+                self.previous_button.configure(state="disabled", fg_color=BUTTON_FG)  # Disable the previous button for the first question since there is no previous question to go to. The "fg_color" is set to "BUTTON_FG" to reset the colour after hovering (which makes it darker).
+                self.previous_button.unbind("<Enter>")  # Unbind the "Enter" event from the previous button so that it doesn't change to a darker colour when the mouse hovers over it while the button is disabled.
             else:
-                self.previous_btn.configure(state="normal")
+                self.previous_button.configure(state="normal")
+                self.previous_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.previous_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
 
             if self.question_no == len(question_details):
-                self.next_btn.configure(text="Finish")  # Change the next button text to "Finish" for the last question so that it's clearer to the user that they are on the final question.
+                self.next_button.configure(text="Finish")  # Change the next button text to "Finish" for the last question so that it's clearer to the user that they are on the final question.
             else:
-                self.next_btn.configure(text="Next")
+                self.next_button.configure(text="Next")
         
         self.current_index = self.question_no - 1  # Remove 1 to correctly index from the "question_details" list (since lists start at index 0, but the question numbers start at 1).
         self.upcoming_topic = question_details[self.current_index][0]
@@ -1562,36 +1641,47 @@ class Quiz:
             self.angle_value_lbl.configure(text=self.angle_value)
 
         if self.answer_viewing_active == True:
-            self.btn_1.configure(text=f" A.    {self.all_answers[self.current_index][0]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR, image=None)
-            self.answer_management(self.btn_1, self.all_answers[self.current_index][0])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_1) will be highlighted if it contains the correct or user-chosen incorrect answer.
-            self.btn_2.configure(text=f" B.    {self.all_answers[self.current_index][1]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR, image=None)
-            self.answer_management(self.btn_2, self.all_answers[self.current_index][1])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_2) will be highlighted if it contains the correct or user-chosen incorrect answer.
-            self.btn_3.configure(text=f" C.    {self.all_answers[self.current_index][2]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR, image=None)
-            self.answer_management(self.btn_3, self.all_answers[self.current_index][2])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_3) will be highlighted if it contains the correct or user-chosen incorrect answer.
-            self.btn_4.configure(text=f" D.    {self.all_answers[self.current_index][3]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR, image=None)
-            self.answer_management(self.btn_4, self.all_answers[self.current_index][3])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_4) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            self.ans_button_1.configure(text=f" A.    {self.all_answers[self.current_index][0]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR)
+            for widget in self.ans_button_1.place_slaves():
+                widget.place_forget()  # Clear any existing placed tick/cross images from button 1 for the next question so the new tick/cross image can be added later to the relevant button.
+            self.answer_management(self.ans_button_1, self.all_answers[self.current_index][0])  # Send the button name and the answer to the answer management method so that the specific button (self.ans_button_1) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            
+            self.ans_button_2.configure(text=f" B.    {self.all_answers[self.current_index][1]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR)
+            for widget in self.ans_button_2.place_slaves():
+                widget.place_forget()  # Clear any existing placed tick/cross images from button 2 for the next question so the new tick/cross image can be added later to the relevant button.
+            self.answer_management(self.ans_button_2, self.all_answers[self.current_index][1])  # Send the button name and the answer to the answer management method so that the specific button (self.ans_button_2) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            
+            self.ans_button_3.configure(text=f" C.    {self.all_answers[self.current_index][2]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR)
+            for widget in self.ans_button_3.place_slaves():
+                widget.place_forget()  # Clear any existing placed tick/cross images from button 3 for the next question so the new tick/cross image can be added later to the relevant button.
+            self.answer_management(self.ans_button_3, self.all_answers[self.current_index][2])  # Send the button name and the answer to the answer management method so that the specific button (self.ans_button_3) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            
+            self.ans_button_4.configure(text=f" D.    {self.all_answers[self.current_index][3]}", fg_color=BUTTON_FG, border_width=0, text_color_disabled=DISABLED_FONT_COLOUR)
+            for widget in self.ans_button_4.place_slaves():
+                widget.place_forget()  # Clear any existing placed tick/cross images from button 4 for the next question so the new tick/cross image can be added later to the relevant button.
+            self.answer_management(self.ans_button_4, self.all_answers[self.current_index][3])  # Send the button name and the answer to the answer management method so that the specific button (self.ans_button_4) will be highlighted if it contains the correct or user-chosen incorrect answer.
 
         else:
             # Shuffle answer options and assign them to buttons
             answer_choices = [self.correct_answer] + self.fake_answers
             random.shuffle(answer_choices)
 
-            self.btn_1.configure(text=f" A.    {answer_choices[0]}", command=lambda: self.answer_management(self.btn_1, answer_choices[0]))
-            self.btn_2.configure(text=f" B.    {answer_choices[1]}", command=lambda: self.answer_management(self.btn_2, answer_choices[1]))
-            self.btn_3.configure(text=f" C.    {answer_choices[2]}", command=lambda: self.answer_management(self.btn_3, answer_choices[2]))
-            self.btn_4.configure(text=f" D.    {answer_choices[3]}", command=lambda: self.answer_management(self.btn_4, answer_choices[3]))
+            self.ans_button_1.configure(text=f" A.    {answer_choices[0]}", command=lambda: self.tools.on_ctkbutton_click(self.ans_button_1, None, lambda: self.answer_management(self.ans_button_1, answer_choices[0])))
+            self.ans_button_2.configure(text=f" B.    {answer_choices[1]}", command=lambda: self.tools.on_ctkbutton_click(self.ans_button_2, None, lambda: self.answer_management(self.ans_button_2, answer_choices[1])))
+            self.ans_button_3.configure(text=f" C.    {answer_choices[2]}", command=lambda: self.tools.on_ctkbutton_click(self.ans_button_3, None, lambda: self.answer_management(self.ans_button_3, answer_choices[2])))
+            self.ans_button_4.configure(text=f" D.    {answer_choices[3]}", command=lambda: self.tools.on_ctkbutton_click(self.ans_button_4, None, lambda: self.answer_management(self.ans_button_4, answer_choices[3])))
 
 
     # Method for managing the user's answer to the current question.
     def answer_management(self, button, answer):
         if self.answer_viewing_active == True:
-            if button == self.previous_btn:
+            if button == self.previous_button:
                 if self.question_no > 1:  # Go to the previous question by removing 1 from the question number and updating the question, only if the question number is greater than 1 (since the question numbers start at 1).
                     self.question_no -= 1
                     self.question_no_lbl.configure(text=f"Question {self.question_no}/{question_amount}")  # Update the question number label.
                     self.update_question()
             
-            elif button == self.next_btn:
+            elif button == self.next_button:
                 if self.question_no < question_amount:
                     self.question_no += 1
                     self.question_no_lbl.configure(text=f"Question {self.question_no}/{question_amount}")  # Update the question number label.
@@ -1606,13 +1696,11 @@ class Quiz:
                 self.current_index = self.question_no - 1  # Remove 1 to correctly index from the "question_details" list (since lists start at index 0, but the question numbers start at 1).
                 self.user_answer = question_details[self.current_index][6]
 
-                main_window.button_image_1 = Image.open("AppData/Images/tick.png")  # Load the correct answer button image.
-                self.tick_image = main_window.button_image_1  # Assign the loaded image to a variable for use in a correct answer button.
-                self.tick_img = CTk.CTkImage(self.tick_image, size=(20, 17))  # Create a CTkImage object with the tick image to allow scaling to be used.
+                self.tick_image = Image.open("AppData/Images/tick.png")  # Load the correct answer button image.
+                self.tick_img = CTk.CTkImage(self.tick_image, size=(16, 17))  # Create a CTkImage object with the tick image to allow scaling to be used.
 
-                main_window.button_image_2 = Image.open("AppData/Images/cross.png")  # Load the incorrect answer button image.
-                self.cross_image = main_window.button_image_2  # Assign the loaded image to a variable for use in an incorrect answer button.
-                self.cross_img = CTk.CTkImage(self.cross_image, size=(20, 17))  # Create a CTkImage object with the cross image to allow scaling to be used.
+                self.cross_image = Image.open("AppData/Images/cross.png")  # Load the incorrect answer button image.
+                self.cross_img = CTk.CTkImage(self.cross_image, size=(16, 17))  # Create a CTkImage object with the cross image to allow scaling to be used.
 
                 # Check if the user answer was incorrect
                 if self.user_answer != self.correct_answer:
@@ -1622,13 +1710,17 @@ class Quiz:
                 
                     # Highlight the user's incorrect answer button choice with red.
                     if answer == self.user_answer:
-                        button.configure(fg_color="#f37272", text_color_disabled=FONT_COLOUR, image=self.cross_img, compound="right")
+                        button.configure(fg_color="#f37272", text_color_disabled=FONT_COLOUR)
+                        cross_lbl = CTk.CTkLabel(button, text=None, image=self.cross_img)
+                        cross_lbl.place(relx=0.9, rely=0.5, anchor=E)
                 
                 # Check if the user answer was correct
                 elif self.user_answer == self.correct_answer:
                     # Highlight the correct answer button with green.
                     if answer == self.correct_answer:
-                        button.configure(fg_color="#00ea89", text_color_disabled=FONT_COLOUR, image=self.tick_img, compound="right")
+                        button.configure(fg_color="#00ea89", text_color_disabled=FONT_COLOUR)
+                        tick_lbl = CTk.CTkLabel(button, text=None, image=self.tick_img)
+                        tick_lbl.place(relx=0.9, rely=0.5, anchor=E)
         
         else:
             self.current_index = self.question_no - 1  # Remove 1 to correctly index from the "question_details" list (since lists start at index 0, but the question numbers start at 1).
@@ -2050,11 +2142,17 @@ class Quiz:
             # Create the labels and pause button to be placed at the top of the quiz page.
             self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{question_amount}", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR)
             self.question_no_lbl.grid(column=0, row=0, pady=10, sticky=NSEW)
-            self.previous_btn = CTk.CTkButton(quiz_dtls_frame1, text="Previous", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, width=100, height=30, corner_radius=7.5, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, command=lambda: self.answer_management(self.previous_btn, None),
-                                              state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
-            self.previous_btn.grid(column=1, row=0, padx=(0,10), pady=10)
-            self.next_btn = CTk.CTkButton(quiz_dtls_frame1, text="Next", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, width=100, height=30, corner_radius=7.5, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, command=lambda: self.answer_management(self.next_btn, None))
-            self.next_btn.grid(column=2, row=0, padx=(0,10), pady=10)
+            
+            self.reviewing_btn_sizes = [100, 30, 14]  # Specify the sizing to be used for buttons (width, height, font size).
+
+            self.previous_button = CTk.CTkButton(quiz_dtls_frame1, text="Previous", command=lambda: self.tools.on_ctkbutton_click(self.previous_button, None, lambda: self.answer_management(self.previous_button, None)),
+                                              width=self.reviewing_btn_sizes[0], height=self.reviewing_btn_sizes[1], corner_radius=7.5, fg_color=BUTTON_FG, hover=None, state="disabled", font=(DEFAULT_FONT, self.reviewing_btn_sizes[2], "bold"), text_color=FONT_COLOUR, text_color_disabled=DISABLED_FONT_COLOUR)
+            self.previous_button.grid(column=1, row=0, padx=(0,10), pady=10)
+            
+            self.next_button = CTk.CTkButton(quiz_dtls_frame1, text="Next", command=lambda: self.tools.on_ctkbutton_click(self.next_button, None, lambda: self.answer_management(self.next_button, None)),
+                                          width=self.reviewing_btn_sizes[0], height=self.reviewing_btn_sizes[1], corner_radius=7.5, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.reviewing_btn_sizes[2], "bold"), text_color=FONT_COLOUR)
+            self.next_button.grid(column=2, row=0, padx=(0,10), pady=10)
+            self.next_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.next_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
         
         else:
             # Set width for columns 0-2 (3 total) in quiz details frame 1. Total minimum column width is 410px.
@@ -2062,19 +2160,23 @@ class Quiz:
             quiz_dtls_frame1.columnconfigure(1, weight=0, minsize=40)
             quiz_dtls_frame1.columnconfigure(2, weight=0, minsize=185)
 
-            main_window.button_image_1 = Image.open("AppData/Images/pause.png")  # Load the pause button image.
-            self.tick_image = main_window.button_image_1  # Assign the loaded image to a variable for use in the pause button.
-            self.pause_img = CTk.CTkImage(self.tick_image, size=(16, 17))  # Create a CTkImage object with the pause image to allow scaling to be used.
+            self.pause_image = Image.open("AppData/Images/pause.png")  # Load the pause button image.
+            self.pause_img = CTk.CTkImage(self.pause_image, size=(16, 17))  # Create a CTkImage object with the pause image to allow scaling to be used.
 
-            main_window.button_image_2 = Image.open("AppData/Images/play.png")  # Load the play button image.
-            self.cross_image = main_window.button_image_2  # Assign the loaded image to a variable for use in the play button.
-            self.play_img = CTk.CTkImage(self.cross_image, size=(16, 17))  # Create a CTkImage object with the play image to allow scaling to be used.
+            self.play_image = Image.open("AppData/Images/play.png")  # Load the play button image.
+            self.play_img = CTk.CTkImage(self.play_image, size=(16, 17))  # Create a CTkImage object with the play image to allow scaling to be used.
 
             # Create the labels and pause button to be placed at the top of the quiz page.
             self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{question_amount}", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR)
             self.question_no_lbl.grid(column=0, row=0, pady=10, sticky=NSEW)
-            self.pause_btn = CTk.CTkButton(quiz_dtls_frame1, text=None, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR, command=self.pause_quiz, width=40, height=30, corner_radius=7.5, image=self.pause_img, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
-            self.pause_btn.grid(column=1, row=0, pady=10)
+            
+            self.pause_btn_sizes = [40, 30, 14]  # Specify the sizing to be used for buttons (width, height, font size).
+
+            self.pause_button = CTk.CTkButton(quiz_dtls_frame1, text=None, command=lambda: self.tools.on_ctkbutton_click(self.pause_button, None, self.pause_quiz),
+                                              width=self.pause_btn_sizes[0], height=self.pause_btn_sizes[1], corner_radius=7.5, image=self.pause_img, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.pause_btn_sizes[2], "bold"), text_color=FONT_COLOUR)
+            self.pause_button.grid(column=1, row=0, pady=10)
+            self.pause_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.pause_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
+            
             self.timer_lbl = CTk.CTkLabel(quiz_dtls_frame1, text="", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
             self.timer_lbl.grid(column=2, row=0, pady=10, sticky=NSEW)
             if timer.get() == True:
@@ -2116,25 +2218,25 @@ class Quiz:
 
         if self.answer_viewing_active == True:
             # Create the disabled answer buttons, which automatically send their value to answer management (using invoke) to identify what button displays the stored user answer and the correct answer.
-            self.btn_1 = CTk.CTkButton(self.answer_frame, text=f" A.    {self.all_answers[self.current_index][0]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
-                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
-            self.btn_1.grid(column=0, row=0, padx=(0, 5), pady=(0,5))
-            self.answer_management(self.btn_1, self.all_answers[self.current_index][0])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_1) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            self.ans_button_1 = CTk.CTkButton(self.answer_frame, text=f" A.    {self.all_answers[self.current_index][0]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover=None, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
+            self.ans_button_1.grid(column=0, row=0, padx=(0, 5), pady=(0,5))
+            self.answer_management(self.ans_button_1, self.all_answers[self.current_index][0])  # Send the button name and the answer to the answer management method so that the specific button (self.ans_button_1) will be highlighted if it contains the correct or user-chosen incorrect answer.
             
-            self.btn_2 = CTk.CTkButton(self.answer_frame, text=f" B.    {self.all_answers[self.current_index][1]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
-                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
-            self.btn_2.grid(column=1, row=0, padx=(5, 0), pady=(0,5))
-            self.answer_management(self.btn_2, self.all_answers[self.current_index][1])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_2) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            self.ans_button_2 = CTk.CTkButton(self.answer_frame, text=f" B.    {self.all_answers[self.current_index][1]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover=None, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
+            self.ans_button_2.grid(column=1, row=0, padx=(5, 0), pady=(0,5))
+            self.answer_management(self.ans_button_2, self.all_answers[self.current_index][1])  # Send the button name and the answer to the answer management method so that the specific button (self.ans_button_2) will be highlighted if it contains the correct or user-chosen incorrect answer.
             
-            self.btn_3 = CTk.CTkButton(self.answer_frame, text=f" C.    {self.all_answers[self.current_index][2]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
-                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
-            self.btn_3.grid(column=0, row=1, padx=(0, 5), pady=(5,0))
-            self.answer_management(self.btn_3, self.all_answers[self.current_index][2])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_3) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            self.ans_button_3 = CTk.CTkButton(self.answer_frame, text=f" C.    {self.all_answers[self.current_index][2]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover=None, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
+            self.ans_button_3.grid(column=0, row=1, padx=(0, 5), pady=(5,0))
+            self.answer_management(self.ans_button_3, self.all_answers[self.current_index][2])  # Send the button name and the answer to the answer management method so that the specific button (self.ans_button_3) will be highlighted if it contains the correct or user-chosen incorrect answer.
             
-            self.btn_4 = CTk.CTkButton(self.answer_frame, text=f" D.    {self.all_answers[self.current_index][3]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
-                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
-            self.btn_4.grid(column=1, row=1, padx=(5, 0), pady=(5,0))
-            self.answer_management(self.btn_4, self.all_answers[self.current_index][3])  # Send the button name and the answer to the answer management method so that the specific button (self.btn_4) will be highlighted if it contains the correct or user-chosen incorrect answer.
+            self.ans_button_4 = CTk.CTkButton(self.answer_frame, text=f" D.    {self.all_answers[self.current_index][3]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR,
+                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover=None, state="disabled", text_color_disabled=DISABLED_FONT_COLOUR)
+            self.ans_button_4.grid(column=1, row=1, padx=(5, 0), pady=(5,0))
+            self.answer_management(self.ans_button_4, self.all_answers[self.current_index][3])  # Send the button name and the answer to the answer management method so that the specific button (self.ans_button_4) will be highlighted if it contains the correct or user-chosen incorrect answer.
         
         else:
             # Create a list of the answers and shuffle them.
@@ -2142,18 +2244,27 @@ class Quiz:
             random.shuffle(answer_choices)
 
             # Create the answer buttons.
-            self.btn_1 = CTk.CTkButton(self.answer_frame, text=f" A.    {answer_choices[0]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(self.btn_1, answer_choices[0]),
-                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
-            self.btn_1.grid(column=0, row=0, padx=(0, 5), pady=(0,5))
-            self.btn_2 = CTk.CTkButton(self.answer_frame, text=f" B.    {answer_choices[1]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(self.btn_2, answer_choices[1]),
-                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
-            self.btn_2.grid(column=1, row=0, padx=(5, 0), pady=(0,5))
-            self.btn_3 = CTk.CTkButton(self.answer_frame, text=f" C.    {answer_choices[2]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(self.btn_3, answer_choices[2]),
-                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
-            self.btn_3.grid(column=0, row=1, padx=(0, 5), pady=(5,0))
-            self.btn_4 = CTk.CTkButton(self.answer_frame, text=f" D.    {answer_choices[3]}", font=(DEFAULT_FONT, 16, "bold"), text_color=FONT_COLOUR, command=lambda: self.answer_management(self.btn_4, answer_choices[3]),
-                                       anchor=W, width=200, height=40, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER)
-            self.btn_4.grid(column=1, row=1, padx=(5, 0), pady=(5,0))
+            self.ans_btn_sizes = [200, 40, 16]  # Specify the sizing to be used for buttons (width, height, font size).
+
+            self.ans_button_1 = CTk.CTkButton(self.answer_frame, text=f" A.    {answer_choices[0]}", command=lambda: self.tools.on_ctkbutton_click(self.ans_button_1, None, lambda: self.answer_management(self.ans_button_1, answer_choices[0])),
+                                       anchor=W, width=self.ans_btn_sizes[0], height=self.ans_btn_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.ans_btn_sizes[2], "bold"), text_color=FONT_COLOUR)
+            self.ans_button_1.grid(column=0, row=0, padx=(0, 5), pady=(0,5))
+            self.ans_button_1.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.ans_button_1))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
+
+            self.ans_button_2 = CTk.CTkButton(self.answer_frame, text=f" B.    {answer_choices[1]}", command=lambda: self.tools.on_ctkbutton_click(self.ans_button_2, None, lambda: self.answer_management(self.ans_button_2, answer_choices[1])),
+                                       anchor=W, width=self.ans_btn_sizes[0], height=self.ans_btn_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.ans_btn_sizes[2], "bold"), text_color=FONT_COLOUR)
+            self.ans_button_2.grid(column=1, row=0, padx=(5, 0), pady=(0,5))
+            self.ans_button_2.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.ans_button_2))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
+
+            self.ans_button_3 = CTk.CTkButton(self.answer_frame, text=f" C.    {answer_choices[2]}", command=lambda: self.tools.on_ctkbutton_click(self.ans_button_3, None, lambda: self.answer_management(self.ans_button_3, answer_choices[2])),
+                                       anchor=W, width=self.ans_btn_sizes[0], height=self.ans_btn_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.ans_btn_sizes[2], "bold"), text_color=FONT_COLOUR)
+            self.ans_button_3.grid(column=0, row=1, padx=(0, 5), pady=(5,0))
+            self.ans_button_3.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.ans_button_3))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
+
+            self.ans_button_4 = CTk.CTkButton(self.answer_frame, text=f" D.    {answer_choices[3]}", command=lambda: self.tools.on_ctkbutton_click(self.ans_button_4, None, lambda: self.answer_management(self.ans_button_4, answer_choices[3])),
+                                       anchor=W, width=self.ans_btn_sizes[0], height=self.ans_btn_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.ans_btn_sizes[2], "bold"), text_color=FONT_COLOUR)
+            self.ans_button_4.grid(column=1, row=1, padx=(5, 0), pady=(5,0))
+            self.ans_button_4.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.ans_button_4))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
 
         if self.answer_viewing_active == False:
             self.start_timer()  # Only start the timer if answer viewing is not active (False), since the timer does not need to be used when viewing quiz answers.
@@ -2355,10 +2466,17 @@ class Home:
         button_frame.columnconfigure(1, weight=0, minsize=205)
 
         # Create the buttons.
-        CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.tools.save_details("Scoreboard", "Home", "Temporary", None),
-                      width=200, height=35, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=EW, padx=(0,5))
-        CTk.CTkButton(button_frame, text="Start", command=lambda:self.tools.save_details("Quiz", "Home", "Permanent", SETTINGS_FILE_PATH),
-                      width=200, height=35, corner_radius=10, fg_color=BUTTON_FG, hover_color=BUTTON_HOVER, font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR).grid(column=1, row=1, sticky=EW, padx=(5,0))
+        self.button_sizes = [200, 35, 14]  # Specify the sizing to be used for buttons (width, height, font size).
+
+        self.scoreboard_button = CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.tools.on_ctkbutton_click(self.scoreboard_button, self.button_sizes, lambda: self.tools.save_details("Scoreboard", "Home", "Temporary", None)),
+                      width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
+        self.scoreboard_button.grid(column=0, row=1, padx=(0,5))
+        self.scoreboard_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.scoreboard_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
+        
+        self.start_button = CTk.CTkButton(button_frame, text="Start", command=lambda: self.tools.on_ctkbutton_click(self.start_button, self.button_sizes, lambda:self.tools.save_details("Quiz", "Home", "Permanent", SETTINGS_FILE_PATH)),
+                      width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
+        self.start_button.grid(column=1, row=1, padx=(5,0))
+        self.start_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.start_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
         
         if deiconify_reqd == True:   # Check if deiconify is required, which is True when the main window is first created on program start. 
             main_window.deiconify()  # Show the main window after all elements are created to prevent flickering of the window before the UI is set up.
@@ -2377,7 +2495,7 @@ def main():
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "4.1.1"
+    APP_VERSION = "4.2.0"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
