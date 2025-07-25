@@ -33,15 +33,15 @@ class PDF(FPDF):
 
 
     def header(self):
-        # Add logo on the top left
+        # Add logo on the top left.
         self.image("AppData\Images\qw_logo.png", 15, 7, 25)
 
-        # Centred title image
+        # Centred title image.
         img_width = 70
         x_center = (self.w - img_width) / 2  # Calculate centre x position.
         self.image("AppData\Images\scoreboard_logo.png", x=x_center, y=9, w=img_width)
 
-        # Line break to move below header elements
+        # Line break to move below header elements.
         self.ln(20)
 
 
@@ -59,37 +59,37 @@ class PDF(FPDF):
 
 
     def scoreboard_table(self, data, headings):
-        # Position cursor before starting the table content
+        # Position cursor before starting the table content.
         self.set_y(32)
         self.set_font("helvetica", size=10)
-        self.set_text_color("#000000")  # Set text colour to black
-        self.set_draw_color("#6aa5db")  # Set draw (table border) colour to light blue
+        self.set_text_color("#000000")  # Set text colour to black.
+        self.set_draw_color("#6aa5db")  # Set draw (table border) colour to light blue.
         self.set_line_width(0.25)
 
-        # Style for heading row
+        # Style for heading row.
         heading_style = FontFace(emphasis="BOLD", color=255, fill_color="#87bcf4")
 
-        # Create a styled table using fpdf2's context manager
+        # Create a styled table using fpdf2's context manager.
         with self.table(
             borders_layout="NO_HORIZONTAL_LINES",
             cell_fill_color=(224, 235, 255),           # Alternate cell colour for colour banding.
             cell_fill_mode=TableCellFillMode.ROWS,     # Fill alternate cells for colour banding.
-            col_widths=(75, 290, 125, 120, 100, 100),  # Set column widths
-            headings_style=heading_style,              # Apply heading style
-            line_height=6,                             # Set line height
-            text_align=("CENTER", "LEFT", "CENTER", "CENTER", "CENTER", "CENTER"),  # Set text alignment for each column
-            width=180,                                 # Set table width
+            col_widths=(75, 290, 125, 120, 100, 100),  # Set column widths.
+            headings_style=heading_style,              # Apply heading style.
+            line_height=6,                             # Set line height.
+            text_align=("CENTER", "LEFT", "CENTER", "CENTER", "CENTER", "CENTER"),  # Set text alignment for each column.
+            width=180,                                 # Set table width.
         ) as table:
-            # Create header cells
+            # Create header cells.
             heading_row = table.row()
             for i, heading in enumerate(headings):
-                heading_row.cell(" " + heading if i == 1 else heading)  # Add left-side padding only to the "Username" column
+                heading_row.cell(" " + heading if i == 1 else heading)  # Add left-side padding only to the "Username" column.
 
-            # Create each row of data from the scoreboard file
+            # Create each row of data from the scoreboard file.
             for data_row in data:
                 row = table.row()
                 for i, datum in enumerate(data_row):
-                    row.cell(" " + str(datum) if i == 1 else str(datum))  # Add left-side padding only to the "Username" column
+                    row.cell(" " + str(datum) if i == 1 else str(datum))  # Add left-side padding only to the "Username" column.
 
 
 
@@ -191,7 +191,7 @@ class Tools:
     def error_control(self, file_name, file_dir, file_data, control):
         global users, settings, timer, enable_trigonometry, enable_algebra, deletion_history_states
         
-        # Temporary storage mode
+        # Temporary storage mode.
         if control == "Temporary":
             if file_data == "users": users = []          # If the "file_data" variable is set to "users", make "users" as an empty list.
             elif file_data == "settings":
@@ -641,11 +641,11 @@ class Tools:
                     words = ["scores", "have"] if len(selections) > 1 else ["score", "has"]  # Determine whether to use "scores" and "have", or "score" and "has" in the message boxes based on the number of selected items.
                     response = messagebox.askyesno("Delete Selected Scores", f"Are you sure that you want to delete the selected {words[0]}?")
                     if response == True:
-                        # Find the users to delete and record their original index positions
+                        # Find the users to delete and record their original index positions.
                         users_to_delete = []
                         for index, user in enumerate(users):
                             if str(user[0]) in selections:
-                                users_to_delete.append((user, index))  # Store (user, index) in the "users_to_delete" list
+                                users_to_delete.append((user, index))  # Store (user, index) in the "users_to_delete" list.
                         
                         # Store all selected users with their indices in the "history_stack" list.
                         if deletion_history_states.get() > 0:             # Check if the "deletion_history_states" variable is greater than 0, which means that the deletion history is enabled.
@@ -941,7 +941,7 @@ class Scoreboard:
         top_frame1.columnconfigure(1, weight=0, minsize=205)
         top_frame1.columnconfigure(2, weight=0, minsize=205)
 
-        # Logo creation
+        # Logo creation.
         total_height = 70  # Height for the canvas and vertical centre position is calculated by the height of two buttons (60px) + 10px padding.
         self.logo_canvas = Canvas(top_frame1, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0, width=400, height=total_height)  # Create a canvas for the banner image.
         self.logo_canvas.grid(column=0, row=0, rowspan=2, sticky=EW)
@@ -1043,7 +1043,7 @@ class Scoreboard:
         try:
             # Add each item in the list into the Treeview.
             for index, details in enumerate(users):
-                index += 1  # Increment the index by 1 each time t
+                index += 1  # Increment the index by 1 each time a new item is added.
                 self.tree.insert("", "end", values=(details[0], details[1], details[2], details[3], details[4], details[5]))
         except IndexError as index_error:  # Error control for instances such as the "users" list being empty.
             messagebox.showerror("Invalid Data", f"The saved JSON data is invalid or incomplete.\nPlease check the file for missing fields.\n\n{index_error}\n\n{full_directory}")
@@ -1140,7 +1140,7 @@ class Completion:
         main_window.config(menu=completion_menubar)
 
         if banners_loaded == False:
-            # Banner creation (left side)
+            # Banner creation (left side).
             lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
             lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0), pady=27)
             lbanner = Image.open("AppData/Images/lbanner.png")
@@ -1149,7 +1149,7 @@ class Completion:
             lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
             lbanner_canvas.image = lbanner
 
-            # Banner creation (right side)
+            # Banner creation (right side).
             rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
             rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20), pady=27)
             rbanner = Image.open("AppData/Images/rbanner.png")
@@ -1164,7 +1164,7 @@ class Completion:
         self.main_content_frame = CTk.CTkFrame(main_window, fg_color="transparent")
         self.main_content_frame.grid(column=1, row=0, sticky=EW, padx=35, pady=(0,20))
 
-        # Logo creation
+        # Logo creation.
         self.logo_canvas = Canvas(self.main_content_frame, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
         self.logo_canvas.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,0))
         self.logo = Image.open("AppData/Images/logo.png")
@@ -1272,7 +1272,7 @@ class Quiz:
 
     def start_timer(self):
         self.timer_active = True
-        # Only set the quiz start time on the first run of the timer loop (not after unpausing)
+        # Only set the quiz start time on the first run of the timer loop (not after unpausing).
         if self.quiz_start_time == None:
             self.quiz_start_time = time.time()  # Record the current time as quiz start time.
         self.timer_loop()  # Start the timer update loop.
@@ -1481,7 +1481,7 @@ class Quiz:
             # Calculate how long the quiz has been running in total and subtract all time spent paused.
             self.calculated_elapsed_time = int(current_time - self.quiz_start_time - self.total_paused_time)
 
-            # Format the total seconds into HH:MM:SS format
+            # Format the total seconds into HH:MM:SS format.
             # Divide total seconds by 3600 (as there are 3600 seconds in an hour) to get the number of full hours.
             hours = self.calculated_elapsed_time // 3600  # Floor division (//) divides and rounds down to the nearest whole number.
             
@@ -1496,7 +1496,7 @@ class Quiz:
             self.time_string = f"{hours:02}:{minutes:02}:{seconds:02}"  
             self.total_time = self.time_string
 
-            # Update the label
+            # Update the label.
             if timer.get() == True:
                 self.timer_lbl.configure(text=f"Time: {self.time_string}")
 
@@ -1685,7 +1685,7 @@ class Quiz:
             self.answer_management(self.ans_button_4, self.all_answers[self.current_index][3])  # Send the button name and the answer to the answer management method so that the specific button (self.ans_button_4) will be highlighted if it contains the correct or user-chosen incorrect answer.
 
         else:
-            # Shuffle answer options and assign them to buttons
+            # Shuffle answer options and assign them to buttons.
             answer_choices = [self.correct_answer] + self.fake_answers
             random.shuffle(answer_choices)
 
@@ -1711,8 +1711,8 @@ class Quiz:
                     self.update_question()
                     
                 else:
-                    self.tools.reset_details("Completion", None)    # Clear the quiz and user details (passing "Completion" as the origin)
-                    self.tools.reset_details("Quiz", "Scoreboard")  # Clear the extra quiz details (passing "Scoreboard" as the origin)
+                    self.tools.reset_details("Completion", None)    # Clear the quiz and user details (passing "Completion" as the origin).
+                    self.tools.reset_details("Quiz", "Scoreboard")  # Clear the extra quiz details (passing "Scoreboard" as the origin).
                     self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the scoreboard page.
         
             else:
@@ -1725,7 +1725,7 @@ class Quiz:
                 self.cross_image = Image.open("AppData/Images/cross.png")  # Load the incorrect answer button image.
                 self.cross_img = CTk.CTkImage(self.cross_image, size=(16, 17))  # Create a CTkImage object with the cross image to allow scaling to be used.
 
-                # Check if the user answer was incorrect
+                # Check if the user answer was incorrect.
                 if self.user_answer != self.correct_answer:
                     # Highlight the correct answer button with green.
                     if answer == self.correct_answer:
@@ -1737,7 +1737,7 @@ class Quiz:
                         cross_lbl = CTk.CTkLabel(button, text=None, image=self.cross_img)
                         cross_lbl.place(relx=0.9, rely=0.5, anchor=E)
                 
-                # Check if the user answer was correct
+                # Check if the user answer was correct.
                 elif self.user_answer == self.correct_answer:
                     # Highlight the correct answer button with green.
                     if answer == self.correct_answer:
@@ -2128,7 +2128,7 @@ class Quiz:
         self.binded_keys = ["<Control-r>", "<Control-n>", "<Escape>"]                       # Create a list of binded keys to be used later for unbinding them when the user goes to a different page.
 
         if banners_loaded == False:
-            # Banner creation (left side)
+            # Banner creation (left side).
             lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
             lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0), pady=27)
             lbanner = Image.open("AppData/Images/lbanner.png")
@@ -2137,7 +2137,7 @@ class Quiz:
             lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
             lbanner_canvas.image = lbanner
 
-            # Banner creation (right side)
+            # Banner creation (right side).
             rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
             rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20), pady=27)
             rbanner = Image.open("AppData/Images/rbanner.png")
@@ -2231,7 +2231,7 @@ class Quiz:
         elif self.upcoming_topic == "Algebra":
             self.setup_algebra()
 
-        # Create a frame for the answer buttons
+        # Create a frame for the answer buttons.
         self.answer_frame = CTk.CTkFrame(self.main_content_frame, fg_color="transparent")
         self.answer_frame.grid(column=0, row=2, sticky=EW, padx=20, pady=(5,0))
         
@@ -2337,7 +2337,7 @@ class Home:
             self.question_amnt_lbl.configure(text=self.process_slider_value(slider_id, value))
 
 
-    # Method to insert the chosen option from the autocomplete
+    # Method to insert the chosen option from the autocomplete.
     def insert_method(self, e):
         self.username_entry.delete(0, 'end')
         self.username_entry.insert(0, e)
@@ -2383,7 +2383,7 @@ class Home:
         main_window.config(menu=home_menubar)
 
         if banners_loaded == False:
-            # Banner creation (left side)
+            # Banner creation (left side).
             lbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
             lbanner_canvas.grid(column=0, row=0, sticky=EW, padx=(20, 0), pady=27)
             lbanner = Image.open("AppData/Images/lbanner.png")
@@ -2392,7 +2392,7 @@ class Home:
             lbanner_canvas.create_image(lbanner.width() / 2, lbanner.height() / 2, anchor=CENTER, image=lbanner)  # Add the image to the canvas by calculating the x and y coordinates for centre position.
             lbanner_canvas.image = lbanner
 
-            # Banner creation (right side)
+            # Banner creation (right side).
             rbanner_canvas = Canvas(main_window, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
             rbanner_canvas.grid(column=2, row=0, sticky=EW, padx=(0, 20), pady=27)
             rbanner = Image.open("AppData/Images/rbanner.png")
@@ -2407,7 +2407,7 @@ class Home:
         self.main_content_frame = CTk.CTkFrame(main_window, fg_color="transparent")
         self.main_content_frame.grid(column=1, row=0, sticky=EW, padx=35, pady=(0,20))
 
-        # Logo creation
+        # Logo creation.
         logo_canvas = Canvas(self.main_content_frame, bg=MAIN_WINDOW_BG, bd=0, highlightthickness=0)  # Create a canvas for the banner image.
         logo_canvas.grid(column=0, row=0, sticky=EW, padx=20, pady=(20,0))
         logo = Image.open("AppData/Images/logo.png")
@@ -2442,7 +2442,7 @@ class Home:
         # Only the first occurrence of each lowercase name is included in "unique_display_usernames", as all lowercase versions are added to the "processed" list to find duplicates.
         self.unique_display_usernames = [name for name in self.display_usernames if not (name.lower() in self.processed or self.processed.append(name.lower()))]  # Usernames included in "unique_display_usernames" are ones that are not already in the "processed" list. If they aren't in the "processed" list, add them to the list to prevent future duplicates.
 
-        if self.unique_display_usernames == []:  # Check if the usernames list is empty
+        if self.unique_display_usernames == []:  # Check if the usernames list is empty.
             self.username_entry = CTk.CTkEntry(self.home_frame1, fg_color="#73ace0", border_color="#6aa5db", text_color=FONT_COLOUR, corner_radius=10)
             self.username_entry.insert(0, "")
             self.entry_type = "CTkEntry"
@@ -2454,7 +2454,7 @@ class Home:
             # Attach the scrollable dropdown library to the username entry combo box.
             self.dropdown = CTkScrollableDropdown(self.username_entry, values=[""], justify="left", button_color="transparent", fg_color="#73ace0", bg_color=FRAME_FG, frame_border_color="#6aa5db", frame_corner_radius=10,
                                                   scrollbar_button_color="#5997d5", scrollbar_button_hover_color="#497caf", hover_color=MENU_HOVER, text_color=FONT_COLOUR, autocomplete=True)
-            self.dropdown.configure(values=self.unique_display_usernames)  # Set the values of the combo box to the usernames of the users in the users list (user[1])
+            self.dropdown.configure(values=self.unique_display_usernames)  # Set the values of the combo box to the usernames of the users in the users list (user[1]).
             # CTkScrollableDropdown library utilises "transient()" to stay on top, so after destroying the combo box (by going to a new page - Scoreboard or Quiz) and creating it again (going back to the Home page), the main window needs to be focused. 
             # If this isn't done, the focus will go back to the dropdown and prevent interaction with the combo box entry section, stopping users from being able to type inside it.
             main_window.focus_force()  # Focus the main window to ensure interaction with the combo box entry section.
@@ -2511,7 +2511,7 @@ class Home:
 def main(): 
     global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DISABLED_FONT_COLOUR, DEFAULT_FONT, SEMIBOLD_DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
     global full_directory, initial_pdf_directory, INITIAL_PDF_NAME, DOCUMENTATION_PATH, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
-    global users, overwrite_score, quiz_paused, banners_loaded, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, enable_trigonometry, enable_algebra, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
+    global users, overwrite_score, quiz_paused, banners_loaded, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, enable_trigonometry, enable_algebra, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags.
 
     # Get the operating system name to manage functionalities in the program with limited support for multiple operating systems.
     # When run on Linux, this will return "Linux". On macOS, this will return "Darwin". On Windows, this will return "Windows".
@@ -2530,7 +2530,7 @@ def main():
         main_window.iconphoto(False, PhotoImage(file="AppData/Images/icon.png"))  # Set the title bar icon.
     main_window.resizable(False, False)             # Set the program window's resizable property for height and width to False.
     
-    # Colour hex code for UI elements
+    # Colour hex code for UI elements.
     MAIN_WINDOW_BG = "#d0ebfc"                  # Set the background colour to be used for the main window.
     FRAME_FG = "#87bcf4"                        # Set the foreground colour to be used for all frames.
     BUTTON_FG = "#5ba2ef"                       # Set the foreground colour to be used for all buttons.
@@ -2541,7 +2541,7 @@ def main():
     FONT_COLOUR = "#FFFFFF"                     # Set the font colour to be used for all CTk elements.
     DISABLED_FONT_COLOUR = "#a3cbf5"            # Set the font colour to be used for all disabled CTk elements, such as buttons.
     
-    # Default program font
+    # Default program font.
     available_fonts = font.families()  # Get a list of available fonts on the system.
     DEFAULT_FONT = "Segoe UI" if "Segoe UI" in available_fonts else "TkDefaultFont"  # Use "Segoe UI" if available, otherwise use "TkDefaultFont" as a fallback.
     SEMIBOLD_DEFAULT_FONT = "Segoe UI Semibold" if "Segoe UI Semibold" in available_fonts else "Segoe UI" if "Segoe UI" in available_fonts else "TkDefaultFont"  # Use "Segoe UI Semibold" if available, otherwise use "Segoe UI" if available, otherwise use "TkDefaultFont" as a final fallback.
