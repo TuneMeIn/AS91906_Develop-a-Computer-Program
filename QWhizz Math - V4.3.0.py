@@ -202,6 +202,28 @@ class Tools:
                 deletion_history_states.set(settings.get("deletion_history_states"))  # Set the deletion history states to the value stored in the "default_settings" dictionary.
         return  # Exit the function after handling the error control for temporary storage mode.
 
+
+    # Method for opening a specified file from within the program.
+    def open_file(self, origin, file_dir, file_name):
+        if origin == "Quiz" and quiz_paused == False: 
+            self.quiz.pause_quiz()    # Pause the quiz if a file is opened from the "Quiz" window and the quiz is not already paused.
+
+        if not os.path.exists(file_dir):
+            messagebox.showwarning("File Not Found", f"The {file_name} file cannot be found. Please download the file from the GitHub repository and try again.")
+            os.startfile("https://github.com/TuneMeIn/AS91906_Develop-a-Computer-Program")
+            return
+
+        try:
+            os.startfile(file_dir)
+        
+        # Error control for instances such as the file being inaccessible or lacking the permission to read it.
+        except IOError as io_error:
+            messagebox.showwarning("File Error", f"An error occurred while reading the {file_name} file.\n\n{io_error}\n\n{file_dir}")  # Show an error message if the file cannot be read.
+        
+        # Error control for any other exceptions that may occur.
+        except Exception as e:
+            messagebox.showwarning("Unexpected Error", f"An unexpected error occurred while reading the {file_name} file.\n\n{e}\n\n{file_dir}")  # Show an error message if there is an unexpected error.
+
     
     # Procedure for loading the "users" and "settings" lists from the JSON files.
     def load_details(self, file_name, file_dir, file_data):
@@ -303,7 +325,7 @@ class Tools:
             
             # Error control for any other exceptions that may occur.
             except Exception as e:
-                response3 = messagebox.askyesno("Unexpected Error", f"An unexpected error occurred while reading the {file_name} file. Do you want to replace it?")  # Show an error message if there is an unexpected error.
+                response3 = messagebox.askyesno("Unexpected Error", f"An unexpected error occurred while reading the {file_name} file. Do you want to replace it?\n\n{e}\n\n{full_directory}")  # Show an error message if there is an unexpected error.
                 self.loading_status = ["Error", "Replace"] if response3 == True else ["Error", None]  # Set the loading status based on the user's choice, adding "Replace" to the second element of the list if the user wants to replace the file.
             
             if self.loading_status[0] == "Error" and self.loading_status[1] == "Replace":  # Check if there is a loading error and that the user chose to replace the file.
@@ -896,7 +918,7 @@ class Scoreboard:
 
         help_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         scoreboard_menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Documentation")
+        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file("Scoreboard", DOCUMENTATION_PATH, "readme.pdf"))
         help_menu.add_command(label="About", command=lambda: self.about.setup_about("Scoreboard"))
 
         main_window.config(menu=scoreboard_menubar)
@@ -1112,7 +1134,7 @@ class Completion:
 
         help_menu = Menu(completion_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         completion_menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Documentation")
+        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file("Completion", DOCUMENTATION_PATH, "readme.pdf"))
         help_menu.add_command(label="About", command=lambda: self.about.setup_about("Completion"))
 
         main_window.config(menu=completion_menubar)
@@ -1159,11 +1181,12 @@ class Completion:
         completion_frame1.columnconfigure(0, weight=1, minsize=410)
 
         # Create the labels to be placed next to their relevant entry boxes.
-        CTk.CTkLabel(completion_frame1, text="Quiz Complete!", font=(DEFAULT_FONT, 18, "bold"), text_color=FONT_COLOUR).grid(column=0, row=0, sticky=EW, padx=5, pady=(20,8))
-        CTk.CTkLabel(completion_frame1, text=f"You scored a total of: {self.quiz.score}/{question_amount}", font=(DEFAULT_FONT, 15), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=EW, padx=5)
-        CTk.CTkLabel(completion_frame1, text=f"Difficulty: {difficulty}", font=(DEFAULT_FONT, 15), text_color=FONT_COLOUR).grid(column=0, row=2, sticky=EW, padx=5)
-        self.total_time_lbl = CTk.CTkLabel(completion_frame1, text="", font=(DEFAULT_FONT, 15), text_color=FONT_COLOUR)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
+        CTk.CTkLabel(completion_frame1, text="Quiz Complete!", font=(DEFAULT_FONT, 20, "bold"), text_color=FONT_COLOUR).grid(column=0, row=0, sticky=EW, padx=5, pady=(20,8))
+        CTk.CTkLabel(completion_frame1, text=f"Total Score: {self.quiz.score}/{question_amount}", font=(SEMIBOLD_DEFAULT_FONT, 16), text_color=FONT_COLOUR).grid(column=0, row=1, sticky=EW, padx=5)
+        CTk.CTkLabel(completion_frame1, text=f"Difficulty: {difficulty}", font=(SEMIBOLD_DEFAULT_FONT, 16), text_color=FONT_COLOUR).grid(column=0, row=2, sticky=EW, padx=5)
+        self.total_time_lbl = CTk.CTkLabel(completion_frame1, text="", font=(SEMIBOLD_DEFAULT_FONT, 16), text_color=FONT_COLOUR)  # Make an empty label for the timer until the state of the timer is determined (enabled/disabled).
         self.total_time_lbl.grid(column=0, row=3, sticky=EW, padx=5, pady=(0,20))
+
         if timer.get() == True:
             self.total_time_lbl.configure(text=self.tools.timer_config("Completion", "Enable", None))  # Use the "timer_config" function to update the label text relative to the state of the timer.
         if timer.get() == False:
@@ -2092,8 +2115,8 @@ class Quiz:
 
         help_menu = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         quiz_menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Documentation")
-        origin = "Quiz Answers" if self.answer_viewing_active == True else "Quiz"  # About window utilises pause functionality when a quiz is active, so the origin needs to be something other than "Quiz" for this to not be used (since the answer viewing mode cannot be paused).
+        origin = "Quiz Answers" if self.answer_viewing_active == True else "Quiz"  # Documentation file opening command and about window utilises pause functionality when a quiz is active, so the origin needs to be something other than "Quiz" for this to not be used (since the answer viewing mode cannot be paused).
+        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file(origin, DOCUMENTATION_PATH, "readme.pdf"))
         help_menu.add_command(label="About", command=lambda: self.about.setup_about(origin))
 
         main_window.config(menu=quiz_menubar)
@@ -2354,7 +2377,7 @@ class Home:
 
         help_menu = Menu(home_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         home_menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Documentation")
+        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file("Home", DOCUMENTATION_PATH, "readme.pdf"))
         help_menu.add_command(label="About", command=lambda: self.about.setup_about("Home"))
 
         main_window.config(menu=home_menubar)
@@ -2413,13 +2436,13 @@ class Home:
         self.question_amnt_lbl.grid(column=2, row=2, sticky=W, padx=(5,0), pady=(0,20))
 
         # Set up the username entry, which is either an entry box if there are no usernames saved, or a combo box if there are usernames saved. This prevents the user from trying to open a combo box dropdown when there are no usernames saved.
-        display_usernames = [user[1] for user in users]  # Get the usernames from the users list.
-        processed = []  # Create an empty list to store one instance of each username, ensuring that there are no duplicates.
+        self.display_usernames = [user[1] for user in users]  # Get the usernames from the users list.
+        self.processed = []  # Create an empty list to store one instance of each username, ensuring that there are no duplicates.
         # Create a list of usernames that are unique regardless of casing (e.g., "Jack" and "JACK" are treated as the same username - "jack"), using ".lower" so that all pr usernames are converted to lowercase.
         # Only the first occurrence of each lowercase name is included in "unique_display_usernames", as all lowercase versions are added to the "processed" list to find duplicates.
-        unique_display_usernames = [name for name in display_usernames if not (name.lower() in processed or processed.append(name.lower()))]  # Usernames included in "unique_display_usernames" are ones that are not already in the "processed" list. If they aren't in the "processed" list, add them to the list to prevent future duplicates.
+        self.unique_display_usernames = [name for name in self.display_usernames if not (name.lower() in self.processed or self.processed.append(name.lower()))]  # Usernames included in "unique_display_usernames" are ones that are not already in the "processed" list. If they aren't in the "processed" list, add them to the list to prevent future duplicates.
 
-        if unique_display_usernames == []:  # Check if the usernames list is empty
+        if self.unique_display_usernames == []:  # Check if the usernames list is empty
             self.username_entry = CTk.CTkEntry(self.home_frame1, fg_color="#73ace0", border_color="#6aa5db", text_color=FONT_COLOUR, corner_radius=10)
             self.username_entry.insert(0, "")
             self.entry_type = "CTkEntry"
@@ -2431,7 +2454,7 @@ class Home:
             # Attach the scrollable dropdown library to the username entry combo box.
             self.dropdown = CTkScrollableDropdown(self.username_entry, values=[""], justify="left", button_color="transparent", fg_color="#73ace0", bg_color=FRAME_FG, frame_border_color="#6aa5db", frame_corner_radius=10,
                                                   scrollbar_button_color="#5997d5", scrollbar_button_hover_color="#497caf", hover_color=MENU_HOVER, text_color=FONT_COLOUR, autocomplete=True)
-            self.dropdown.configure(values=unique_display_usernames)  # Set the values of the combo box to the usernames of the users in the users list (user[1])
+            self.dropdown.configure(values=self.unique_display_usernames)  # Set the values of the combo box to the usernames of the users in the users list (user[1])
             # CTkScrollableDropdown library utilises "transient()" to stay on top, so after destroying the combo box (by going to a new page - Scoreboard or Quiz) and creating it again (going back to the Home page), the main window needs to be focused. 
             # If this isn't done, the focus will go back to the dropdown and prevent interaction with the combo box entry section, stopping users from being able to type inside it.
             main_window.focus_force()  # Focus the main window to ensure interaction with the combo box entry section.
@@ -2458,22 +2481,22 @@ class Home:
         self.slider_label_update("S2", self.questions_slider.get())
 
         # Create a frame to place the buttons inside.
-        button_frame = CTk.CTkFrame(self.main_content_frame, fg_color="transparent")
-        button_frame.grid(column=0, row=2, sticky=EW, padx=20, pady=(5,20))
+        self.button_frame = CTk.CTkFrame(self.main_content_frame, fg_color="transparent")
+        self.button_frame.grid(column=0, row=2, sticky=EW, padx=20, pady=(5,20))
         
         # Set width for columns 0-1 (2 total) in the button frame. Total minimum column width is 410px.
-        button_frame.columnconfigure(0, weight=0, minsize=205)
-        button_frame.columnconfigure(1, weight=0, minsize=205)
+        self.button_frame.columnconfigure(0, weight=0, minsize=205)
+        self.button_frame.columnconfigure(1, weight=0, minsize=205)
 
         # Create the buttons.
         self.button_sizes = [200, 35, 14]  # Specify the sizing to be used for buttons (width, height, font size).
 
-        self.scoreboard_button = CTk.CTkButton(button_frame, text="Scoreboard", command=lambda: self.tools.on_ctkbutton_click(self.scoreboard_button, self.button_sizes, lambda: self.tools.save_details("Scoreboard", "Home", "Temporary", None)),
+        self.scoreboard_button = CTk.CTkButton(self.button_frame, text="Scoreboard", command=lambda: self.tools.on_ctkbutton_click(self.scoreboard_button, self.button_sizes, lambda: self.tools.save_details("Scoreboard", "Home", "Temporary", None)),
                       width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
         self.scoreboard_button.grid(column=0, row=1, padx=(0,5))
         self.scoreboard_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.scoreboard_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
         
-        self.start_button = CTk.CTkButton(button_frame, text="Start", command=lambda: self.tools.on_ctkbutton_click(self.start_button, self.button_sizes, lambda:self.tools.save_details("Quiz", "Home", "Permanent", SETTINGS_FILE_PATH)),
+        self.start_button = CTk.CTkButton(self.button_frame, text="Start", command=lambda: self.tools.on_ctkbutton_click(self.start_button, self.button_sizes, lambda:self.tools.save_details("Quiz", "Home", "Permanent", SETTINGS_FILE_PATH)),
                       width=self.button_sizes[0], height=self.button_sizes[1], corner_radius=10, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.button_sizes[2], "bold"), text_color=FONT_COLOUR)
         self.start_button.grid(column=1, row=1, padx=(5,0))
         self.start_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.start_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
@@ -2487,7 +2510,7 @@ class Home:
 # Main function for starting the program.
 def main(): 
     global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DISABLED_FONT_COLOUR, DEFAULT_FONT, SEMIBOLD_DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
-    global full_directory, initial_pdf_directory, INITIAL_PDF_NAME, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
+    global full_directory, initial_pdf_directory, INITIAL_PDF_NAME, DOCUMENTATION_PATH, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
     global users, overwrite_score, quiz_paused, banners_loaded, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, enable_trigonometry, enable_algebra, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags
 
     # Get the operating system name to manage functionalities in the program with limited support for multiple operating systems.
@@ -2495,7 +2518,7 @@ def main():
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "4.2.0"
+    APP_VERSION = "4.3.0"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
@@ -2505,7 +2528,7 @@ def main():
     main_window.title("QWhizz Math")                # Set the title of the window.
     if os.path.exists("AppData/Images/icon.png"):   # Check if the icon file exists before setting it.
         main_window.iconphoto(False, PhotoImage(file="AppData/Images/icon.png"))  # Set the title bar icon.
-    main_window.resizable(False, False)         # Set the resizable property for height and width to False.
+    main_window.resizable(False, False)             # Set the program window's resizable property for height and width to False.
     
     # Colour hex code for UI elements
     MAIN_WINDOW_BG = "#d0ebfc"                  # Set the background colour to be used for the main window.
@@ -2526,7 +2549,8 @@ def main():
     # Setup the directories and paths for saving and loading data.
     full_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"  # Get the absolute intended path of the JSON files for debugging purposes when errors and warnings occur, storing it in "full_directory".
     initial_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"   # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "initial_pdf_directory".
-    INITIAL_PDF_NAME = "QWhizz Math Scoreboard.pdf"   # Set the file path for the scoreboard PDF file.
+    INITIAL_PDF_NAME = "QWhizz Math Scoreboard.pdf"                           # Set the file path for the scoreboard PDF file.
+    DOCUMENTATION_PATH = f"{os.path.dirname(os.path.abspath(__file__))}/readme.pdf"  # Set the file path for the documentation PDF file.
     SCOREBOARD_FILE_PATH = "AppData/scoreboard.json"  # Set the file path for the scoreboard JSON file.
     SETTINGS_FILE_PATH = "AppData/settings.json"      # Set the file path for the settings JSON file.
 
