@@ -209,8 +209,9 @@ class Tools:
             self.quiz.pause_quiz()    # Pause the quiz if a file is opened from the "Quiz" window and the quiz is not already paused.
 
         if not os.path.exists(file_dir):
-            messagebox.showwarning("File Not Found", f"The {file_name} file cannot be found. Please download the file from the GitHub repository and try again.")
-            os.startfile("https://github.com/TuneMeIn/AS91906_Develop-a-Computer-Program")
+            response1 = messagebox.askokcancel("File Not Found", f"The {file_name} file cannot be found. You will be redirected to the GitHub repository to download the file. Do you want to continue?\n\n{file_dir}", icon="warning")
+            if response1 == True:
+                os.startfile("https://github.com/TuneMeIn/AS91906_Develop-a-Computer-Program")
             return
 
         try:
@@ -1345,7 +1346,7 @@ class Quiz:
         quiz_paused = True  # Set the flag to indicate that the quiz is paused.
         self.stop_timer(None, None)
         self.pause_start_time = time.time()  # Record the real-world time for when the pause started.
-        self.pause_button.configure(command=lambda: self.tools.on_ctkbutton_click(self.pause_button, None, self.unpause_quiz), image=self.play_img)
+        self.pause_button.configure(command=lambda: self.tools.on_ctkbutton_click(self.pause_button, None, self.unpause_quiz), image=self.play_image)
         
         # Create a pause overlay to visually block the quiz content until the quiz is unpaused.
         height = self.question_frame.winfo_height() + self.answer_frame.winfo_height() + 10  # Get the total height of both frames (question and answer frames), including the height of padding.
@@ -1370,7 +1371,7 @@ class Quiz:
         # Remove the pause overlay and restore the pause button to its original command, then start the timer again.
         self.pause_frame.destroy()
         quiz_paused = False  # Set the flag to indicate that the quiz is unpaused.
-        self.pause_button.configure(command=lambda: self.tools.on_ctkbutton_click(self.pause_button, None, self.pause_quiz), image=self.pause_img)
+        self.pause_button.configure(command=lambda: self.tools.on_ctkbutton_click(self.pause_button, None, self.pause_quiz), image=self.pause_image)
         self.start_timer()     
 
 
@@ -1569,7 +1570,7 @@ class Quiz:
         draw.line([square_points[1], square_points[2]], fill="white", width=3)  # Right side of the square (vertical).
 
         # Load the triangle image.
-        triangle_img = CTk.CTkImage(light_image=image, dark_image=image, size=(200, 160))
+        triangle_img = CTk.CTkImage(image, size=(200, 160))  # Create a CTkImage object with the image to allow scaling to be used. Define the size of the image with "size" (width, height).
 
         # Create a label to display the image.
         self.triangle_lbl = CTk.CTkLabel(self.inner_frame, image=triangle_img, text=None)
@@ -1719,11 +1720,11 @@ class Quiz:
                 self.current_index = self.question_no - 1  # Remove 1 to correctly index from the "question_details" list (since lists start at index 0, but the question numbers start at 1).
                 self.user_answer = question_details[self.current_index][6]
 
-                self.tick_image = Image.open("AppData/Images/tick.png")  # Load the correct answer button image.
-                self.tick_img = CTk.CTkImage(self.tick_image, size=(16, 17))  # Create a CTkImage object with the tick image to allow scaling to be used.
+                # Load the correct answer button image.
+                self.tick_image = CTk.CTkImage(Image.open("AppData/Images/tick.png"), size=(16, 17))  # Create a CTkImage object with the tick image to allow scaling to be used. Define the size of the image with "size" (width, height).
 
-                self.cross_image = Image.open("AppData/Images/cross.png")  # Load the incorrect answer button image.
-                self.cross_img = CTk.CTkImage(self.cross_image, size=(16, 17))  # Create a CTkImage object with the cross image to allow scaling to be used.
+                # Load the incorrect answer button image.
+                self.cross_image = CTk.CTkImage(Image.open("AppData/Images/cross.png"), size=(16, 17))  # Create a CTkImage object with the cross image to allow scaling to be used. Define the size of the image with "size" (width, height).
 
                 # Check if the user answer was incorrect.
                 if self.user_answer != self.correct_answer:
@@ -1734,7 +1735,7 @@ class Quiz:
                     # Highlight the user's incorrect answer button choice with red.
                     if answer == self.user_answer:
                         button.configure(fg_color="#f37272", text_color_disabled=FONT_COLOUR)
-                        cross_lbl = CTk.CTkLabel(button, text=None, image=self.cross_img)
+                        cross_lbl = CTk.CTkLabel(button, text=None, image=self.cross_image)
                         cross_lbl.place(relx=0.9, rely=0.5, anchor=E)
                 
                 # Check if the user answer was correct.
@@ -1742,7 +1743,7 @@ class Quiz:
                     # Highlight the correct answer button with green.
                     if answer == self.correct_answer:
                         button.configure(fg_color="#00ea89", text_color_disabled=FONT_COLOUR)
-                        tick_lbl = CTk.CTkLabel(button, text=None, image=self.tick_img)
+                        tick_lbl = CTk.CTkLabel(button, text=None, image=self.tick_image)
                         tick_lbl.place(relx=0.9, rely=0.5, anchor=E)
         
         else:
@@ -2183,11 +2184,11 @@ class Quiz:
             quiz_dtls_frame1.columnconfigure(1, weight=0, minsize=40)
             quiz_dtls_frame1.columnconfigure(2, weight=0, minsize=185)
 
-            self.pause_image = Image.open("AppData/Images/pause.png")  # Load the pause button image.
-            self.pause_img = CTk.CTkImage(self.pause_image, size=(16, 17))  # Create a CTkImage object with the pause image to allow scaling to be used.
+            # Load the pause button image.
+            self.pause_image = CTk.CTkImage(Image.open("AppData/Images/pause.png"), size=(16, 17))  # Create a CTkImage object with the pause image to allow scaling to be used. Define the size of the image with "size" (width, height).
 
-            self.play_image = Image.open("AppData/Images/play.png")  # Load the play button image.
-            self.play_img = CTk.CTkImage(self.play_image, size=(16, 17))  # Create a CTkImage object with the play image to allow scaling to be used.
+            # Load the play button image.
+            self.play_image = CTk.CTkImage(Image.open("AppData/Images/play.png"), size=(16, 17))  # Create a CTkImage object with the play image to allow scaling to be used. Define the size of the image with "size" (width, height).
 
             # Create the labels and pause button to be placed at the top of the quiz page.
             self.question_no_lbl = CTk.CTkLabel(quiz_dtls_frame1, text=f"Question: {self.question_no}/{question_amount}", font=(DEFAULT_FONT, 14, "bold"), text_color=FONT_COLOUR)
@@ -2196,7 +2197,7 @@ class Quiz:
             self.pause_btn_sizes = [40, 30, 14]  # Specify the sizing to be used for buttons (width, height, font size).
 
             self.pause_button = CTk.CTkButton(quiz_dtls_frame1, text=None, command=lambda: self.tools.on_ctkbutton_click(self.pause_button, None, self.pause_quiz),
-                                              width=self.pause_btn_sizes[0], height=self.pause_btn_sizes[1], corner_radius=7.5, image=self.pause_img, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.pause_btn_sizes[2], "bold"), text_color=FONT_COLOUR)
+                                              width=self.pause_btn_sizes[0], height=self.pause_btn_sizes[1], corner_radius=7.5, image=self.pause_image, fg_color=BUTTON_FG, hover=None, font=(DEFAULT_FONT, self.pause_btn_sizes[2], "bold"), text_color=FONT_COLOUR)
             self.pause_button.grid(column=1, row=0, pady=10)
             self.pause_button.bind("<Enter>", lambda e: self.tools.on_ctkbutton_enter(self.pause_button))  # Bind the "Enter" event to the "on_ctkbutton_enter" method so that the button changes to a darker colour when the mouse hovers over it.
             
@@ -2518,7 +2519,7 @@ def main():
     operating_system = platform.system()
 
     # Set the version number of the program.
-    APP_VERSION = "4.3.0"
+    APP_VERSION = "4.3.1"
 
     # Configure the main window and the variables used for UI element design.
     main_window = Tk()                              # Initialise the main window. For scaling reasons, use a Tk window instead of CTk.
