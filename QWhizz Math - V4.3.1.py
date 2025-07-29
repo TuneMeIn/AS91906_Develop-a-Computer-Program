@@ -4,13 +4,13 @@
 
 # BEFORE USE:
 # Windows:  Open Command Prompt and run:
-#           pip install customtkinter pillow fpdf2
+#           pip install customtkinter pillow
 #
 # macOS:    Open Terminal and run:
-#           brew install python-tk && pip install customtkinter pillow fpdf2
+#           brew install python-tk && pip install customtkinter pillow
 #
 # Linux:    Open Terminal and run:
-#           sudo apt install python3-tk && pip install customtkinter pillow fpdf2
+#           sudo apt install python3-tk && pip install customtkinter pillow
 #
 # Once these packages are installed, the program is ready to use.
 
@@ -19,9 +19,9 @@ from tkinter import ttk, messagebox, filedialog, font
 import customtkinter as CTk
 from AppData.CTkScrollableDropdown import *
 from PIL import Image, ImageTk, ImageDraw
-from fpdf import FPDF
-from fpdf.enums import TableCellFillMode
-from fpdf.fonts import FontFace
+from AppData.fpdf import FPDF
+from AppData.fpdf.enums import TableCellFillMode
+from AppData.fpdf.fonts import FontFace
 from datetime import datetime
 import json, time, random, os, platform, subprocess, math
 
