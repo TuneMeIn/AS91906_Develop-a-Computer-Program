@@ -713,8 +713,9 @@ class Tools:
 
     # Method for resetting details specific to the specified window.
     def reset_details(self, origin, action):
-        global username, difficulty, difficulty_num, question_amount, question_details, temp_fake_answers
+        global history_stack, username, difficulty, difficulty_num, question_amount, question_details, temp_fake_answers
         if origin == "Completion" or origin == "Quiz" and action == "User Reset":
+            history_stack.clear() if origin == "Completion" else None  # Clear the history stack if the origin is "Completion" so that deleted scores cannot be restored after a new user score is added to the "users" list, preventing possible duplicate username and difficulty combinations.
             username = None
             difficulty = None
             difficulty_num = None
@@ -1712,7 +1713,7 @@ class Quiz:
                     self.update_question()
                     
                 else:
-                    self.tools.reset_details("Completion", None)    # Clear the quiz and user details (passing "Completion" as the origin).
+                    self.tools.reset_details("User Reset", None)    # Clear the quiz and user details (passing "User Reset" as the origin).
                     self.tools.reset_details("Quiz", "Scoreboard")  # Clear the extra quiz details (passing "Scoreboard" as the origin).
                     self.tools.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go to the scoreboard page.
         
