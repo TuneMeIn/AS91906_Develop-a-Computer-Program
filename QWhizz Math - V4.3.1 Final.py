@@ -380,6 +380,17 @@ class Tools:
             adjust_entry = ""
 
         else:
+            if " " in username:  # Check if the username contains any spaces.
+                response1 = messagebox.askyesno("Invalid Entry", "Username cannot contain any spaces. Do you want to replace all spaces inside the username with underscores?")
+                if response1 == True:
+                    if invalid_entry != True: invalid_entry = False  # Allow the program to continue to the quiz only if no invalid entry is detected prior to replacing the spaces with underscores.
+                    adjust_entry = username.replace(" ", "_")  # Replace the spaces inside the username with underscores.
+                    username = adjust_entry
+                else:
+                    invalid_entry = True  # Prevent the program from continuing to the quiz after removing the spaces from the username, so the user can adjust the username to their liking.
+                    adjust_entry = username.replace(" ", "")   # Remove the spaces from the username.
+                    username = adjust_entry
+
             if len(username) < 2:  # Check if the username is shorter than 2 characters.
                 warning_messages.append("cannot be shorter than two characters")  # Show a warning message if the username is shorter than 3 characters.
                 label = "Invalid Entry"
@@ -396,16 +407,6 @@ class Tools:
                 warning_messages.append("cannot be longer than twenty characters.\n\nYour entry has been automatically shortened to twenty characters")  # Show a warning message if the username is longer than 20 characters.
                 invalid_entry = True
                 adjust_entry = username[:20]
-
-            if " " in username:  # Check if the username contains any spaces.
-                response1 = messagebox.askyesno("Invalid Entry", "Username cannot contain any spaces. Do you want to replace all spaces inside the username with underscores?")
-                if response1 == True:
-                    if invalid_entry != True: invalid_entry = False  # Allow the program to continue to the quiz only if no invalid entry is detected prior to replacing the spaces with underscores.
-                    adjust_entry = username.replace(" ", "_")  # Replace the spaces inside the username with underscores.
-                    username = adjust_entry
-                else:
-                    invalid_entry = True  # Prevent the program from continuing to the quiz after removing the spaces from the username, so the user can adjust the username to their liking.
-                    adjust_entry = username.replace(" ", "")   # Remove the spaces from the username.
 
         if invalid_entry == True:
             if adjust_entry != False:
