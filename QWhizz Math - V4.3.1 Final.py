@@ -424,7 +424,7 @@ class Tools:
             if adjust_entry != False:
                 if self.home.entry_type == "CTkEntry":
                     self.home.username_entry.delete(0, END)  # Remove the value in the "username_entry" entry box (from the beginning (0) to the end).
-                    self.home.username_entry.insert(0, adjust_entry)  # Reinsert the original username into the username entry box.
+                    self.home.username_entry.insert(0, adjust_entry)  # Insert the adjusted username into the username entry box.
                 elif self.home.entry_type == "CTkComboBox":
                     self.home.username_entry.set(adjust_entry)
             # Check if a user already exists with the same username and difficulty in the "users" list.
