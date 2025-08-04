@@ -2534,7 +2534,7 @@ def main():
         main_window.iconphoto(False, PhotoImage(file="AppData/Images/icon.png"))  # Set the title bar icon.
     main_window.resizable(False, False)             # Set the program window's resizable property for height and width to False.
     
-    # Colour hex code for UI elements.
+    # Colour hex codes for UI elements.
     MAIN_WINDOW_BG = "#d0ebfc"                  # Set the background colour to be used for the main window.
     FRAME_FG = "#87bcf4"                        # Set the foreground colour to be used for all frames.
     BUTTON_FG = "#5ba2ef"                       # Set the foreground colour to be used for all buttons.
