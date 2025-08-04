@@ -1016,7 +1016,6 @@ class Scoreboard:
                     background=[("active", BUTTON_FG)],     # Background colour of the treeview headings when hovered over.
                     foreground=[("active", "white")])       # Text colour of the treeview headings when hovered over.
 
-
         # Create a Treeview widget to display the customer receipts.
         columns = ("Ref #", "Username", "Difficulty", "Questions", "Time", "Score")
         self.tree = ttk.Treeview(tree_frame, columns=columns, show="headings", style="custom.Treeview", height=8, selectmode="extended")
