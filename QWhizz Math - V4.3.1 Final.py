@@ -992,7 +992,7 @@ class Scoreboard:
         treestyle.configure("custom.Treeview.Heading",
                             background=BUTTON_FG,           # Background colour of the treeview headings.
                             foreground="white",             # Text colour of the treeview headings.
-                            font=("Segoe UI", 10,"bold"),   # Font style of the treeview heading text.
+                            font=(DEFAULT_FONT, 10,"bold"),   # Font style of the treeview heading text.
                             padding=(0, 5, 0 ,5),           # Vertical padding of 5 px above and below the text in the treeview headings. 
                             relief="flat")                  # Set the relief to "ridge" to give the header less of a button-look.
 
@@ -1005,7 +1005,7 @@ class Scoreboard:
                             bordercolor=BUTTON_FG,          # Border colour of the treeview field.
                             borderwidth=1,                  # Border width of the treeview field.
                             relief="flat",                  # Set the relief to "flat" to give the field a flat apperanance.
-                            font=("Segoe UI", 10))          # Font style of the treeview field text.
+                            font=(DEFAULT_FONT, 10))          # Font style of the treeview field text.
 
         # Change entry selection colour using ".map()" for dynamic styling of the "selected" state.
         treestyle.map("Treeview",
