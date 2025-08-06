@@ -456,9 +456,9 @@ class Tools:
                 else:
                     existing_ref_numbers = []
                 
-                # Check if the maximum number of unique reference numbers has been reached.
+                # Check if the maximum number of unique reference numbers has been reached, otherwise choose a random available reference number.
                 available_ref_numbers = list(set(range(1000, 1100)) - set(existing_ref_numbers)) if existing_ref_numbers else list(range(1000, 1100))  # Create a list of available reference numbers by subtracting the existing reference numbers from the list of all possible reference numbers.
-                if not available_ref_numbers:  # Check if 100 possible unique 4-digit ref numbers from 1000 to 1099 have been generated.
+                if not available_ref_numbers:  # Check if all 100 possible unique 4-digit ref numbers from 1000 to 1099 have been chosen - i.e. if the "available_ref_numbers" list is empty (due to all possible existing ref numbers being removed from the list), meaning it's False.
                     messagebox.showwarning("Maximum Scores Reached", "No more unique reference numbers can be generated.\nPlease delete old user scores to add new ones.")
                     self.clear_widget(self.scoreboard.setup_scoreboard, True, None, None, None, None)  # Clear all current widgets (passing "True" clears all widgets), then go back to the home page.
                     return
