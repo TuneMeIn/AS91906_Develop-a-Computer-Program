@@ -923,7 +923,7 @@ class Scoreboard:
 
         help_menu = Menu(scoreboard_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         scoreboard_menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file("Scoreboard", DOCUMENTATION_PATH, "readme.pdf"))
+        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file("Scoreboard", documentation_path, "readme.pdf"))
         help_menu.add_command(label="About", command=lambda: self.about.setup_about("Scoreboard"))
 
         main_window.config(menu=scoreboard_menubar)
@@ -990,11 +990,11 @@ class Scoreboard:
 
         # Configure the Treeview style for the headings.
         treestyle.configure("custom.Treeview.Heading",
-                            background=BUTTON_FG,           # Background colour of the treeview headings.
-                            foreground="white",             # Text colour of the treeview headings.
-                            font=(DEFAULT_FONT, 10,"bold"),   # Font style of the treeview heading text.
-                            padding=(0, 5, 0 ,5),           # Vertical padding of 5 px above and below the text in the treeview headings. 
-                            relief="flat")                  # Set the relief to "ridge" to give the header less of a button-look.
+                            background=BUTTON_FG,            # Background colour of the treeview headings.
+                            foreground="white",              # Text colour of the treeview headings.
+                            font=(DEFAULT_FONT, 10,"bold"),  # Font style of the treeview heading text.
+                            padding=(0, 5, 0 ,5),            # Vertical padding of 5 px above and below the text in the treeview headings. 
+                            relief="flat")                   # Set the relief to "ridge" to give the header less of a button-look.
 
         # Configure the Treeview style for the field section.
         treestyle.configure("custom.Treeview",
@@ -1005,7 +1005,7 @@ class Scoreboard:
                             bordercolor=BUTTON_FG,          # Border colour of the treeview field.
                             borderwidth=1,                  # Border width of the treeview field.
                             relief="flat",                  # Set the relief to "flat" to give the field a flat apperanance.
-                            font=(DEFAULT_FONT, 10))          # Font style of the treeview field text.
+                            font=(DEFAULT_FONT, 10))        # Font style of the treeview field text.
 
         # Change entry selection colour using ".map()" for dynamic styling of the "selected" state.
         treestyle.map("Treeview",
@@ -1138,7 +1138,7 @@ class Completion:
 
         help_menu = Menu(completion_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         completion_menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file("Completion", DOCUMENTATION_PATH, "readme.pdf"))
+        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file("Completion", documentation_path, "readme.pdf"))
         help_menu.add_command(label="About", command=lambda: self.about.setup_about("Completion"))
 
         main_window.config(menu=completion_menubar)
@@ -2120,7 +2120,7 @@ class Quiz:
         help_menu = Menu(quiz_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         quiz_menubar.add_cascade(label="Help", menu=help_menu)
         origin = "Quiz Answers" if self.answer_viewing_active == True else "Quiz"  # Documentation file opening command and about window utilises pause functionality when a quiz is active, so the origin needs to be something other than "Quiz" for this to not be used (since the answer viewing mode cannot be paused).
-        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file(origin, DOCUMENTATION_PATH, "readme.pdf"))
+        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file(origin, documentation_path, "readme.pdf"))
         help_menu.add_command(label="About", command=lambda: self.about.setup_about(origin))
 
         main_window.config(menu=quiz_menubar)
@@ -2381,7 +2381,7 @@ class Home:
 
         help_menu = Menu(home_menubar, tearoff=0, activebackground=MENU_HOVER, activeforeground=MENU_ACTIVE_FG)
         home_menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file("Home", DOCUMENTATION_PATH, "readme.pdf"))
+        help_menu.add_command(label="Documentation", command=lambda: self.tools.open_file("Home", documentation_path, "readme.pdf"))
         help_menu.add_command(label="About", command=lambda: self.about.setup_about("Home"))
 
         main_window.config(menu=home_menubar)
@@ -2514,7 +2514,7 @@ class Home:
 # Main function for starting the program.
 def main(): 
     global operating_system, APP_VERSION, main_window, deiconify_reqd, MAIN_WINDOW_BG, FRAME_FG, BUTTON_FG, BUTTON_HOVER, BUTTON_CLICKED, MENU_ACTIVE_FG, MENU_HOVER, FONT_COLOUR, DISABLED_FONT_COLOUR, DEFAULT_FONT, SEMIBOLD_DEFAULT_FONT  # Global variables and constants for the operating system and window UI elements/design.
-    global full_directory, initial_pdf_directory, INITIAL_PDF_NAME, DOCUMENTATION_PATH, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
+    global full_directory, initial_pdf_directory, INITIAL_PDF_NAME, documentation_path, SCOREBOARD_FILE_PATH, SETTINGS_FILE_PATH  # Global variables and constants for the file paths of the general directories, JSON files, and the PDF scoreboard file.
     global users, overwrite_score, quiz_paused, banners_loaded, username, difficulty_num, question_amount, question_details, settings, default_settings, timer, enable_trigonometry, enable_algebra, deletion_history_states, history_stack, redo_stack, data_loaded  # Global lists and variables for data and flags.
 
     # Get the operating system name to manage functionalities in the program with limited support for multiple operating systems.
@@ -2551,10 +2551,10 @@ def main():
     SEMIBOLD_DEFAULT_FONT = "Segoe UI Semibold" if "Segoe UI Semibold" in available_fonts else "Segoe UI" if "Segoe UI" in available_fonts else "TkDefaultFont"  # Use "Segoe UI Semibold" if available, otherwise use "Segoe UI" if available, otherwise use "TkDefaultFont" as a final fallback.
 
     # Setup the directories and paths for saving and loading data.
-    full_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"  # Get the absolute intended path of the JSON files for debugging purposes when errors and warnings occur, storing it in "full_directory".
-    initial_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"   # Get the absolute intended path of the PDF scoreboard file for debugging purposes when errors and warnings occur, storing it in "initial_pdf_directory".
-    INITIAL_PDF_NAME = "QWhizz Math Scoreboard.pdf"                           # Set the file path for the scoreboard PDF file.
-    DOCUMENTATION_PATH = f"{os.path.dirname(os.path.abspath(__file__))}/readme.pdf"  # Set the file path for the documentation PDF file.
+    full_directory = f"{os.path.dirname(os.path.abspath(__file__))}/AppData"         # Get the absolute intended path of the program files for debugging purposes when errors and warnings occur, storing it in "full_directory".
+    initial_pdf_directory = f"{os.path.dirname(os.path.abspath(__file__))}"          # Get the absolute intended path of the scoreboard PDF file for debugging purposes when errors and warnings occur, storing it in "initial_pdf_directory".
+    documentation_path = f"{os.path.dirname(os.path.abspath(__file__))}/readme.pdf"  # Get the absolute intended path of the documentation PDF file, for both general use and debugging purposes when errors and warnings occur, storing it in "documentation_path".
+    INITIAL_PDF_NAME = "QWhizz Math Scoreboard.pdf"   # Set the file path for the scoreboard PDF file.
     SCOREBOARD_FILE_PATH = "AppData/scoreboard.json"  # Set the file path for the scoreboard JSON file.
     SETTINGS_FILE_PATH = "AppData/settings.json"      # Set the file path for the settings JSON file.
 
