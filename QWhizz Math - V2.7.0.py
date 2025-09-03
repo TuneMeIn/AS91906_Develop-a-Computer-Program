@@ -4,13 +4,13 @@
 
 # BEFORE USE:
 # Windows:  Open Command Prompt and run:
-#           pip install customtkinter pillow fpdf2
+#           pip install customtkinter pillow fonttools
 #
 # macOS:    Open Terminal and run:
-#           brew install python-tk && pip install customtkinter pillow fpdf2
+#           brew install python-tk && pip install customtkinter pillow fonttools
 #
 # Linux:    Open Terminal and run:
-#           sudo apt install python3-tk && pip install customtkinter pillow fpdf2
+#           sudo apt install python3-tk && pip install customtkinter pillow fonttools
 #
 # Once these packages are installed, the program is ready to use.
 
@@ -21,9 +21,9 @@ from tkinter import filedialog
 import customtkinter as CTk
 from AppData.CTkScrollableDropdown import *
 from PIL import Image, ImageTk
-from fpdf import FPDF
-from fpdf.enums import TableCellFillMode
-from fpdf.fonts import FontFace
+from AppData.fpdf import FPDF
+from AppData.fpdf.enums import TableCellFillMode
+from AppData.fpdf.fonts import FontFace
 from datetime import datetime
 import json, time, random, os, platform, subprocess
 
@@ -36,12 +36,12 @@ class PDF(FPDF):
 
     def header(self):
         # Add logo on the top left
-        self.image("AppData\Images\qw_logo.png", 15, 7, 25)
+        self.image("AppData/Images/qw_logo.png", 15, 7, 25)
 
         # Centred title image
         img_width = 70
         x_center = (self.w - img_width) / 2  # Calculate centre x position.
-        self.image("AppData\Images\scoreboard_logo.png", x=x_center, y=9, w=img_width)
+        self.image("AppData/Images/scoreboard_logo.png", x=x_center, y=9, w=img_width)
 
         # Line break to move below header elements
         self.ln(20)
@@ -369,7 +369,7 @@ class Tools:
                     return
             else:
                 # Load all data from JSON file.
-                with open("AppData\scoreboard.json", "r") as file:
+                with open("AppData/scoreboard.json", "r") as file:
                     data = json.load(file)  # Load the details from the JSON file into the "data" list.
         else:
             if selections != []:  # Check if the "selections" list is not empty.

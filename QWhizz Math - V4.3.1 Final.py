@@ -4,13 +4,13 @@
 
 # BEFORE USE:
 # Windows:  Open Command Prompt and run:
-#           pip install customtkinter pillow
+#           pip install customtkinter pillow fonttools
 #
 # macOS:    Open Terminal and run:
-#           brew install python-tk && pip install customtkinter pillow
+#           brew install python-tk && pip install customtkinter pillow fonttools
 #
 # Linux:    Open Terminal and run:
-#           sudo apt install python3-tk && pip install customtkinter pillow
+#           sudo apt install python3-tk && pip install customtkinter pillow fonttools
 #
 # Once these packages are installed, the program is ready to use.
 
@@ -34,12 +34,12 @@ class PDF(FPDF):
 
     def header(self):
         # Add logo on the top left.
-        self.image("AppData\Images\qw_logo.png", 15, 7, 25)
+        self.image("AppData/Images/qw_logo.png", 15, 7, 25)
 
         # Centred title image.
         img_width = 70
         x_center = (self.w - img_width) / 2  # Calculate centre x position.
-        self.image("AppData\Images\scoreboard_logo.png", x=x_center, y=9, w=img_width)
+        self.image("AppData/Images/scoreboard_logo.png", x=x_center, y=9, w=img_width)
 
         # Line break to move below header elements.
         self.ln(20)
@@ -549,7 +549,7 @@ class Tools:
                     return
             else:
                 # Load all data from JSON file.
-                with open("AppData\scoreboard.json", "r") as file:
+                with open("AppData/scoreboard.json", "r") as file:
                     data = json.load(file)  # Load the details from the JSON file into the "data" list.
                     data = [user[:6] for user in data]  # Trim each user record to include only the first 6 items (exluding the quiz saves).
 
